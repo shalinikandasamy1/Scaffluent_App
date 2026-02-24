@@ -1,1 +1,38 @@
-<!DOCTYPE html><html lang="en-US"><head><title>Just a moment...</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=Edge"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box;margin:0;padding:0}html{line-height:1.15;-webkit-text-size-adjust:100%;color:#313131;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"}body{display:flex;flex-direction:column;height:100vh;min-height:100vh}.main-content{margin:8rem auto;padding-left:1.5rem;max-width:60rem}@media (width <= 720px){.main-content{margin-top:4rem}}.h2{line-height:2.25rem;font-size:1.5rem;font-weight:500}@media (width <= 720px){.h2{line-height:1.5rem;font-size:1.25rem}}#challenge-error-text{background-image:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgZmlsbD0ibm9uZSI+PHBhdGggZmlsbD0iI0IyMEYwMyIgZD0iTTE2IDNhMTMgMTMgMCAxIDAgMTMgMTNBMTMuMDE1IDEzLjAxNSAwIDAgMCAxNiAzbTAgMjRhMTEgMTEgMCAxIDEgMTEtMTEgMTEuMDEgMTEuMDEgMCAwIDEtMTEgMTEiLz48cGF0aCBmaWxsPSIjQjIwRjAzIiBkPSJNMTcuMDM4IDE4LjYxNUgxNC44N0wxNC41NjMgOS41aDIuNzgzem0tMS4wODQgMS40MjdxLjY2IDAgMS4wNTcuMzg4LjQwNy4zODkuNDA3Ljk5NCAwIC41OTYtLjQwNy45ODQtLjM5Ny4zOS0xLjA1Ny4zODktLjY1IDAtMS4wNTYtLjM4OS0uMzk4LS4zODktLjM5OC0uOTg0IDAtLjU5Ny4zOTgtLjk4NS40MDYtLjM5NyAxLjA1Ni0uMzk3Ii8+PC9zdmc+");background-repeat:no-repeat;background-size:contain;padding-left:34px}@media (prefers-color-scheme: dark){body{background-color:#222;color:#d9d9d9}}</style><meta http-equiv="refresh" content="360"></head><body><div class="main-wrapper" role="main"><div class="main-content"><noscript><div class="h2"><span id="challenge-error-text">Enable JavaScript and cookies to continue</span></div></noscript></div></div><script>(function(){window._cf_chl_opt = {cvId: '3',cZone: 'www.toptal.com',cType: 'managed',cRay: '9d257076484add38',cH: 'wvxlqGD9TsqeP5TonOTAPHQ_7sybUYpuaBuUplhKUjw-1771836245-1.2.1.1-wBxALbgL6feoDsCZUqa1Zyr4rW8bSJO7qO880RPS.Z7ArSW5DJbagRZloy3H6oq9',cUPMDTk:"\/developers\/gitignore\/api\/swift,xcode?__cf_chl_tk=vjgs_WcWEZQRf178.KH_c6EMGnovE1aswDFAxxkk3pg-1771836245-1.0.1.1-J5VXmzAPnljwRXelN._EOmNfqDiBFzCclVyjQZ.nNDQ",cFPWv: 'g',cITimeS: '1771836245',cTplC:0,cTplV:5,cTplB: '0',fa:"\/developers\/gitignore\/api\/swift,xcode?__cf_chl_f_tk=vjgs_WcWEZQRf178.KH_c6EMGnovE1aswDFAxxkk3pg-1771836245-1.0.1.1-J5VXmzAPnljwRXelN._EOmNfqDiBFzCclVyjQZ.nNDQ",md: 'BP631pF8oyyUBYvNiw9XnjoQF4LInyO6DiCqxaiMzNM-1771836245-1.2.1.1-c9tl.awTPu2OQ4ENcsljr1mJFBPH5sUnqVLs_L0HQ752XSxxaZAetf7nPzrp9878VB5uYCpdaa5ljk57lSWR7v6oH83wzKTi.njA8DbiGs3bI3a6_w2V7pdJxPJ20gN1ABTC9ygWUvedT8SEEWx0SP0oq8Gxh7N2oXPE8p9EbDL2FUHalfk0SeS0VSGwvYtO8xcURqaja0BJPszhcwv5_.XcxN5C56sSBLMgk1kDhHDriOZg4sPnGcsc0T0jTW15IP.wYqcm72O.KGudmmInqTmuM2Qn4veR3SISFhx9ADgaKjKixaMgS9OUNxm_Srs.rERfazjC9pxIWAG79cBWEJT_V9Do7WT7qfJ5TA3mGelEgZlczeNZU8GvR1fif0pDO3kB6ASp5LMDuT3v5H4KsSpdkHgvVepBZomrJZn3vTIkFF_4zvqy1zf1kCEM.nh96h0_Ry9.ftj.1jJGuPLsqQvI7OlsfrhAqFSz9HTy9Eo.GyvWBHZdsI.CHbfDXF_727MjetMPbDKteBjttOs7iOVQKmwORe_bnvoEjb8tFTTR.DOMY7h5Xw13RLYhEdluA8Dr5lKA2ByWLmIM4CGC5tjd_y_2FEzyhrSY1dbB.An4kFM204VMiAbA9A2KwaSCWg7sqPRYYnV8_gayp2i9q5eRxGUxrpNNRLbJh0FKm8tF3ycuF5cYcIDLxC7nd.YlvDPL1_HNiUWHdOCTiBTWGP3irZt3jZH3DGOCmmCDV0Ak2cl9WzWYBvjM2Uf4vdjc1FbQWRiJdCZaN_N6LkdaJvSCowBP99Ixyw0aBtmwm5aWipUwKebiuLN5KDq4EYpuNeRObeoTI1DNQhfom5Aut8koOysACLTaAFKz.StViLdrymV5eJ4BTD5zK87G1kqXGUxEjr3fmo8HcRhrpVqsBxCmxhKrByIatiOClQlQmZI9ZlKpCTh7fuK.LUPOtc4kvspeleTpkACGhKG2J47tBHUWiEAJdPCjkpktXYbFgAD3cEUDQxt26TRJLaY7jJ.sgWY14NTlxfWUtsIlU8bvWBffRTkHUC2NEKCgBBg_X28',mdrd: 'qTJMNkHFQl4YolGcejDNE1_dKEqErCUD31CR9KkrL40-1771836245-1.2.1.1-J41085ZvGKmpNPo5FCtW4ibU1.h6pa_5CWFcp9apfzoUqnWrbY02DzBxU1bxwQ_fLDL0GHwgX7OhnyeZjbOQzUAvbv4JkUBqJrm.07T2VYq3LYiN34HIQU2yuUCGeVjGWloGRd.DJjR8MSTwj0bkS36PiJj6r1ZS98lk9wIiQcDxG2wG6FI8cKZWD7xZzu8WxQKkYHxv2uzMArwY.68kxr.QcXXAzjsniJ9sgC9m0Y.ycfgCZ8DvhRe5fhTb91S8xL5bAuO0FAAjhrDxEuBsZTkGRdGBiL0qnisYNa4zzs17fOlLnIl.0YnN4U7nQidDQhM9b2vtBfKdZLJ8Kg99f8sQklm3RunRPpsZj9iK4oOSYioODYOTLtdWgfFxWUO8zbThKn6KOwE_W2zQionDZsE9y90fkY8foWYTz_9PGpJj0X6D9cpxOQN8yvIAp91nOejZ9dzMtx9KZgKAwkJBFpFbwu.9QvFkqmTy6WxiK_vjNmfsCFeuCpg5rBuUxfrUNSR4dATa6eFZN9pviw04aLa3xVlzt8iJnZ89sUTtprXiMKpcgFdmATB3nE85.0.b1i.IBPGHSPYWITYAne3vJBMyWtk7xs55XUbVRoUMjav20ONt3_y4wJbcC5nmYZIN1bqh0NzPlinOL477PIAK58e6K3Th4kMQwYHCm_wOOredHfAMlxr70kfzuWqIyGG0GeIIf_Hm5yPsJGpaEmwgSR3.6eKfx1i7OI.sJSKo73TayIutfRCAVhD9GueCaiA6b9oiBCsY1j2v65cgEGaFbtoM2STEczzobufqVBLVqi9nm.mep1H7Qwsf5k2Dvk1naynNIDAYfTy9SdhJpIz0eT43kkdax.rxN2acozduFaSr3oMZSSrgBKLFiy_cBRynHLLFz_dJ4Jk5t1nQCPRJ9488NfKYvFeCp21LpUGbhEF0pwsSXC13xTiY5KAAsTS0Zxy08keZe0TIDrZsCZABpG6BZR2oZ64GHOodMAaoV5dqtkDi_yNC0P0AeiNmHBB0.Rp4a36QBiqDaojSHf78QZpHNYv4qXMKKTqTrzFjXfzstB1RAr7W_Ug.hJxZ5uWU.YZdCTTFAgu9kQBHzdeEz6txx7OJkDuSuQ3gwzpVSkKnd2XB0KZVUBJ2tQ.44WQCWU5PPN9De7RaAfCIFTvAGk8ioCVq9GNYBd0Y5ZXC.vPiFohYN3.sVeqAoyPAwCvqI4SSj5ru0asYAKYsTDHFLibtS0nivdE2c_iNtNyghFk4nrQBYlrV.YltsxwK8ZSpuNIvd.ApYwPa0lEOKAaBGe2tdIEQR1M71d84TSo3oKTxUETECRu_lf6JkS81lQliPycVEALW3HTBvpRvtD4Prdpe9CXNt5e1H3fqthcgKL8RmY2SnzEHrV3BNEPuFYHu4FKxILEdPyD.rElmxVn2AEgLFZ1QFrwcGq.eAQrUUqES9EejxQVIcYkMa0ictoVLgOvwSaQvPMm0A8QTGaLnoPmR_21b_Lb3VmO36QpkB1vkWji0R.qPbEtHWpmyC_q46..8RkolzQ8fVETTvMB1n.CnTbZvsRv988R6CUMIh2b94kB4y4_ssps4SPI3_EYo9pqC4tqyet5Ed7en2cjt7NGJMuduU1jiyHHPAu.zYL.HoKtu5VKCQkTFqRgnn25p1nmCm8B673qYxPrS.B.WfdNeYuygP9gmM42ZIIZZXa3oCqZH.BpLm8ftqxOtSyjqI2If62D9eSHr8I81_Nk4VJAWKrf6bH.mnmqswF2Kd2WbIJPNu_KwT450BAJZrlZygToEfo.4zlRlxWrATXwy7LCRgG9LbNfO8CphdOVt6lo8Vmr_a0kgKA0kz.cZ_bZunEfQCqCmmV6kgjUSHfUjDOdHiT80syQClS9h4SjSWTPf8W.RR6tneq1iXee3asi93wUQ2qywUAi6FBV7jDaq6Tr0DO3AJf2YpIdsEZfah83epMhywPhEwU.XoGdPg3Al3dHv8XfERUZyXVd0m64vxOH8qZqiUVtJ4az_5HjMpL8yljC5kMKC6sCz4M2EWGcbX48qB74JzPCSaiTkETJyfaeb7BPzUjH.TjcITptjiM7C5FaGEOoVwu_dM_E69iDrvJzG_flJvck4olvXXN7O07wpCKTww1LrlXGyKZgWhRX.gClD0ZRVoTsr3bB.rWLk6fSQP8ZX7cZ7PFQ2Rw4wbFV0wYFPxmDxASu3iQFNRimU7l7B42XVNPidvSWG5tuIdAhRyAo3RnGDpOIEo.fKZ58dn60cRR0F.OrwhnyMo1XB23eTuASO7ean6UDu.alqSnQ9Rz98e.9Oy0iwdQgUbT9gTfaHUXk6ZAPIJc8n2zc',};var a = document.createElement('script');a.src = '/cdn-cgi/challenge-platform/h/g/orchestrate/chl_page/v1?ray=9d257076484add38';window._cf_chl_opt.cOgUHash = location.hash === '' && location.href.indexOf('#') !== -1 ? '#' : location.hash;window._cf_chl_opt.cOgUQuery = location.search === '' && location.href.slice(0, location.href.length - window._cf_chl_opt.cOgUHash.length).indexOf('?') !== -1 ? '?' : location.search;if (window.history && window.history.replaceState) {var ogU = location.pathname + window._cf_chl_opt.cOgUQuery + window._cf_chl_opt.cOgUHash;history.replaceState(null, null,"\/developers\/gitignore\/api\/swift,xcode?__cf_chl_rt_tk=vjgs_WcWEZQRf178.KH_c6EMGnovE1aswDFAxxkk3pg-1771836245-1.0.1.1-J5VXmzAPnljwRXelN._EOmNfqDiBFzCclVyjQZ.nNDQ"+ window._cf_chl_opt.cOgUHash);a.onload = function() {history.replaceState(null, null, ogU);}}document.getElementsByTagName('head')[0].appendChild(a);}());</script></body></html>
+# Xcode
+build/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata/
+*.xccheckout
+*.moved-aside
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.build/
+Packages/
+Package.pins
+Package.resolved
+*.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+
+# CocoaPods
+Pods/
+
+# Carthage
+Carthage/Build/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
