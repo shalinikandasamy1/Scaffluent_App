@@ -48,3 +48,5 @@ FireEye/images/input/*
 FireEye/images/output/*
 !FireEye/images/input/.gitkeep
 !FireEye/images/output/.gitkeep
+
+.env
