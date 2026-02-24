@@ -38,3 +38,13 @@ Carthage/Build/
 .Trashes
 
 fireeye.md
+
+# FireEye Python
+FireEye/.env
+FireEye/*.pt
+FireEye/__pycache__/
+FireEye/**/__pycache__/
+FireEye/images/input/*
+FireEye/images/output/*
+!FireEye/images/input/.gitkeep
+!FireEye/images/output/.gitkeep

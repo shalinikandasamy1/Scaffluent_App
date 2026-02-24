@@ -1,0 +1,19 @@
+# FastAPI + server
+fastapi
+uvicorn[standard]
+python-multipart
+
+# Configuration
+pydantic-settings
+python-dotenv
+
+# YOLO object detection
+ultralytics
+
+# OpenRouter / LLM (OpenAI-compatible SDK)
+openai
+
+# Image processing
+opencv-python
+numpy
+Pillow
