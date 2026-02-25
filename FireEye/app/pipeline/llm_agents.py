@@ -94,11 +94,15 @@ def assess_present(
         {
             "role": "system",
             "content": (
-                "You are a fire safety assessment agent (the 'Present Agent'). "
-                "Analyze the image of a construction site or indoor scene. "
-                "Describe the current situation: list specific hazards, note the "
-                "spatial relationships between ignition sources and flammable materials, "
-                "and estimate distances where possible. Be precise and factual."
+                "You are a fire scene observer (the 'Present Agent'). "
+                "Describe the CURRENT state of the scene objectively — what is present, "
+                "where it is, and what physical relationships exist. Do not editorialize.\n\n"
+                "For each ignition source: state whether it appears controlled (torch, candle, "
+                "welding arc) or uncontrolled (freely burning fire).\n"
+                "For each flammable material: note its distance from the nearest ignition source.\n"
+                "Note any environmental spread factors: wind indicators, embers in flight, "
+                "enclosure, structural elements.\n"
+                "Be concise, precise, and factual. Avoid alarm language."
             ),
         },
         {
@@ -110,7 +114,7 @@ def assess_present(
                         f"Object detections:\n{detection_summary}\n\n"
                         f"Preliminary risk level: {risk.risk_level.value} "
                         f"({risk.reason})\n\n"
-                        "Provide your present-state assessment."
+                        "Describe the current scene state."
                     ),
                 },
                 {"type": "image_url", "image_url": {"url": data_uri}},
@@ -142,15 +146,36 @@ def predict_future(
         {
             "role": "system",
             "content": (
-                "You are a predictive fire safety agent (the 'Future Agent'). "
-                "Think like the TVA from Marvel: analyze forking timelines of what "
-                "could go wrong. Consider:\n"
-                "- Could objects be displaced (kicked, blown, dropped) closer to ignition sources?\n"
-                "- Could sparks, embers, or heat radiation reach flammable materials?\n"
-                "- Could environmental changes (wind, vibration, structural failure) worsen the scene?\n"
-                "- What is the time horizon for each scenario?\n\n"
-                "Use chain-of-thought reasoning. Output structured scenarios with "
-                "likelihood, severity, and time horizon for each."
+                "You are a fire spread risk analyst (the 'Future Agent'). "
+                "Assess how this fire situation is LIKELY to evolve, anchored in "
+                "realistic probabilities — not worst-case brainstorming.\n\n"
+                "Core principle: a controlled, isolated flame in a clear space poses "
+                "LOW spread risk even though fires can theoretically spread under "
+                "exotic circumstances. Construction and industrial work routinely "
+                "involves open flames; that alone is not a crisis.\n\n"
+                "Assign likelihood honestly:\n"
+                "  unlikely — requires a specific accident (displacement, strong wind gust)\n"
+                "  possible — plausible given normal activity, but not actively occurring\n"
+                "  likely   — a natural continuation of what is already visible in the scene\n"
+                "  certain  — already happening or physically inevitable\n\n"
+                "Calibrate overall_risk by what the scene ACTUALLY shows:\n"
+                "  low      — Controlled, isolated flame; no spread pathway visible.\n"
+                "  medium   — Controlled flame with flammable materials visible in the same "
+                "frame; spread needs a specific trigger (displacement, prolonged exposure).\n"
+                "  high     — ANY of: (a) large uncontrolled fire regardless of visible fuel "
+                "targets, (b) active ember/spark dispersal visible in the scene, "
+                "(c) controlled flame immediately adjacent to significant fuel.\n"
+                "  critical — ANY of: (a) at least one scenario that is 'certain' with "
+                "severity 'high' or 'critical' (e.g. explosive container touching flame), "
+                "(b) multiple simultaneous 'likely' high-severity pathways, "
+                "(c) fire already spreading.\n\n"
+                "Important: active ember or spark dispersal visible in the image is itself a "
+                "HIGH spread signal — embers travel beyond the visible frame and can land on "
+                "unknown materials. Do not rate ember-producing fires as 'low'.\n\n"
+                "For each scenario state the physical mechanism (direct contact, radiant heat, "
+                "ember travel, displacement) and what trigger is needed. "
+                "Do NOT list every conceivable bad outcome — focus on what the scene "
+                "actually indicates will happen versus what would require an unlikely accident."
             ),
         },
         {
@@ -161,10 +186,10 @@ def predict_future(
                     "text": (
                         f"Present assessment:\n"
                         f"  Summary: {present.summary}\n"
-                        f"  Hazards: {', '.join(present.hazards)}\n"
+                        f"  Ignition sources / flammables: {', '.join(present.hazards)}\n"
                         f"  Distances: {', '.join(present.distances)}\n\n"
-                        f"Risk level: {risk.risk_level.value}\n\n"
-                        "Predict dangerous future scenarios."
+                        f"Current risk level: {risk.risk_level.value}\n\n"
+                        "Assess how this fire situation is likely to evolve."
                     ),
                 },
                 {"type": "image_url", "image_url": {"url": data_uri}},

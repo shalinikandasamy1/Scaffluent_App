@@ -95,10 +95,23 @@ def classify_with_llm(image_path: str, detections: list[Detection]) -> RiskClass
         {
             "role": "system",
             "content": (
-                "You are a fire safety risk classifier. Given an image and a list of "
-                "detected objects, classify the overall fire risk level as one of: "
-                "safe, low, medium, high, critical. Provide your confidence (0-1) and "
-                "a brief reason."
+                "You are a fire safety risk classifier for construction and industrial sites.\n"
+                "Open flames are NORMAL in many work contexts (welding, cutting torches, "
+                "candles, controlled burns). The presence of a flame alone does NOT indicate "
+                "critical risk.\n\n"
+                "Classify the fire SPREAD risk using this scale:\n"
+                "  safe     — No fire, no active ignition source present.\n"
+                "  low      — Controlled or contained flame (candle, torch, welding arc) in a "
+                "clear area with no flammable materials within reach. Normal work activity.\n"
+                "  medium   — Controlled flame with flammable materials at a safe but noteworthy "
+                "distance, OR small uncontrolled flame with no immediate spread path.\n"
+                "  high     — Large or actively spreading flame, OR a flame in close proximity "
+                "to significant flammable materials that could ignite via radiant heat or embers.\n"
+                "  critical — Active fire spread already occurring, OR immediate multi-vector "
+                "cascade risk (explosive containers adjacent to flame, ember storm reaching fuel).\n\n"
+                "Base your classification on the COMBINATION of: flame size and control level, "
+                "proximity of flammable materials, ember/spark travel, and environmental factors. "
+                "Provide your confidence (0–1) and a concise reason."
             ),
         },
         {
@@ -106,7 +119,10 @@ def classify_with_llm(image_path: str, detections: list[Detection]) -> RiskClass
             "content": [
                 {
                     "type": "text",
-                    "text": f"Detected objects:\n{detection_summary}\n\nClassify the fire risk.",
+                    "text": (
+                        f"Detected objects:\n{detection_summary}\n\n"
+                        "Classify the fire spread risk for this scene."
+                    ),
                 },
                 {"type": "image_url", "image_url": {"url": data_uri}},
             ],
