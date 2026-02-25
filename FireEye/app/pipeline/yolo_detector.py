@@ -25,6 +25,7 @@ def _get_model() -> YOLO:
     if _model is None:
         logger.info("Loading YOLO model: %s", settings.yolo_model_name)
         _model = YOLO(settings.yolo_model_name)
+        _model.to("cpu")
     return _model
 
 
