@@ -45,6 +45,11 @@ def store_output_image(image_id: UUID, suffix: str, data: bytes) -> Path:
     return dest
 
 
+def get_annotated_path(image_id: UUID) -> Path:
+    """Return the path where the YOLO-annotated image should be written."""
+    return _output_dir() / f"{image_id}_annotated.jpg"
+
+
 def get_output_image_path(image_id: UUID, suffix: str) -> Path | None:
     """Look up a stored output image."""
     dest = _output_dir() / f"{image_id}_{suffix}.jpg"
