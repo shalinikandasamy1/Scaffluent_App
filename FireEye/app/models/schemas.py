@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from uuid import UUID, uuid4
 
@@ -94,7 +94,7 @@ class ImageMetadata(BaseModel):
     source_id: str
     location: str = ""
     notes: str = ""
-    ingested_at: datetime = Field(default_factory=datetime.utcnow)
+    ingested_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 # ---------------------------------------------------------------------------
@@ -108,7 +108,7 @@ class AnalysisResult(BaseModel):
     present_assessment: PresentAssessment | None = None
     future_prediction: FuturePrediction | None = None
     annotated_image_path: str | None = None
-    analyzed_at: datetime = Field(default_factory=datetime.utcnow)
+    analyzed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 # ---------------------------------------------------------------------------

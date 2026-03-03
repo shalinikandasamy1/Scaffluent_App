@@ -12,7 +12,7 @@ class Settings(BaseSettings):
 
     # --- OpenRouter / LLM ---
     openrouter_api_key: str = ""
-    llm_model: str = "google/gemini-2.5-flash"
+    llm_model: str = "google/gemini-3-flash-preview"
     llm_temperature: float = 0.0
 
     # --- YOLO ---

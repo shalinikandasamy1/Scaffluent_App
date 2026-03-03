@@ -49,6 +49,8 @@ FireEye/images/output/*
 !FireEye/images/input/.gitkeep
 !FireEye/images/output/.gitkeep
 FireEye/.venv/
+FireEye/venv/
 .venv/
+venv/
 
 .env
