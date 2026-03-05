@@ -69,6 +69,75 @@ RENGOKU_CSS = """
     ) !important;
     border-left: 4px solid var(--rengoku-gold) !important;
   }
+
+  /* ── Mobile-responsive overrides ─────────────────────────────── */
+  @media (max-width: 820px) {
+    /* Stack the splitter vertically on mobile */
+    .q-splitter {
+      flex-direction: column !important;
+      height: auto !important;
+    }
+    .q-splitter > .q-splitter__panel {
+      width: 100% !important;
+      height: auto !important;
+      flex: none !important;
+    }
+    .q-splitter > .q-splitter__separator {
+      display: none !important;
+    }
+    /* Left panel: disable scroll area machinery on mobile,
+       let content flow naturally in the document. */
+    .mobile-scroll-area {
+      min-width: 0 !important;
+    }
+    /* Header: single line, compact */
+    .rengoku-header {
+      padding-left: 12px !important;
+      padding-right: 12px !important;
+      gap: 4px !important;
+      flex-wrap: nowrap !important;
+      min-height: 48px !important;
+      height: 48px !important;
+    }
+    .mobile-header-title {
+      font-size: 0.8rem !important;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+      flex-shrink: 1;
+    }
+    /* Hide dark mode label text on small screens */
+    .mobile-dark-toggle .q-toggle__label {
+      display: none !important;
+    }
+    /* Tabs: make scrollable and smaller */
+    .q-tabs__content {
+      flex-wrap: nowrap !important;
+    }
+    .q-tab__label {
+      font-size: 0.7rem !important;
+    }
+    /* Images: full width, stack vertically */
+    .mobile-images-container {
+      flex-direction: column !important;
+      gap: 16px !important;
+    }
+    .mobile-images-container .q-img,
+    .mobile-images-container img {
+      max-width: 100% !important;
+      width: 100% !important;
+    }
+    /* Detection table: enable horizontal scroll */
+    .q-table__container {
+      overflow-x: auto !important;
+    }
+    /* Overview timing: wrap better */
+    .mobile-timing {
+      margin-left: 0 !important;
+      width: 100%;
+    }
+  }
 </style>
 """
 
@@ -131,6 +200,26 @@ def index() -> None:
         warning="#f97316",    # keep semantic orange for warnings
     )
     ui.add_head_html(RENGOKU_CSS)
+    ui.add_head_html('<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">')
+
+    # On mobile, the QScrollArea's absolute-positioned internals cause 0-height.
+    # This script unwraps the scroll area, keeping the content in normal flow.
+    ui.add_body_html("""<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.innerWidth > 820) return;
+        const check = () => {
+            const sa = document.querySelector('.mobile-scroll-area');
+            if (!sa) return setTimeout(check, 100);
+            const content = sa.querySelector('.q-scrollarea__content');
+            if (!content) return;
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'width:100%;';
+            while (content.firstChild) wrapper.appendChild(content.firstChild);
+            sa.parentElement.replaceChild(wrapper, sa);
+        };
+        check();
+    });
+    </script>""")
 
     # ── per-session mutable state ─────────────────────────────────────────────
     class S:
@@ -151,18 +240,18 @@ def index() -> None:
     ):
         ui.icon("local_fire_department", size="sm")
         ui.label("FireEye — Fire Hazard Intelligence Dashboard").classes(
-            "text-xl font-bold tracking-wide"
+            "text-xl font-bold tracking-wide mobile-header-title"
         )
         ui.space()
         dark = ui.dark_mode()
-        ui.switch("Dark mode").bind_value(dark, "value").props("color=white")
+        ui.switch("Dark mode").bind_value(dark, "value").props("color=white").classes("mobile-dark-toggle")
 
     # ── body: splitter layout ─────────────────────────────────────────────────
     with ui.splitter(value=26).classes("w-full") as splitter:
 
         # ── LEFT: upload form + pipeline status ───────────────────────────────
         with splitter.before:
-            with ui.scroll_area().classes("w-full").style("height: calc(100vh - 56px); min-width: 280px"):
+            with ui.scroll_area().classes("w-full mobile-scroll-area").style("height: calc(100vh - 56px); min-width: 280px"):
                 with ui.column().classes("p-4 gap-3 w-full"):
 
                     ui.label("Upload Image").classes("text-base font-semibold")
@@ -235,7 +324,7 @@ def index() -> None:
 
                     # Images ───────────────────────────────────────────────────
                     with ui.tab_panel(tab_images):
-                        images_row = ui.row().classes("w-full gap-6 flex-wrap p-4")
+                        images_row = ui.row().classes("w-full gap-6 flex-wrap p-4 mobile-images-container")
                         with images_row:
                             ui.label("No images yet.").classes("text-grey-6")
 
@@ -297,7 +386,7 @@ def index() -> None:
                     f"{name}: {s.stage_ms[i]:.0f} ms"
                     for i, (_, name) in enumerate(STAGE_DEFS)
                 )
-                ui.label(timing_str).classes("text-xs text-grey-5 ml-auto")
+                ui.label(timing_str).classes("text-xs text-grey-5 ml-auto mobile-timing")
 
             # ── risk reason ───────────────────────────────────────────────────
             if risk:
