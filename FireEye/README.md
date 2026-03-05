@@ -181,13 +181,32 @@ FireEye/
 ├── generate_test_scenes.py      # Parametric synthetic scene generator
 ├── test_future_prediction.py    # Future Agent stress test
 ├── test_e2e.py                  # End-to-end pipeline test
+├── ui_app.py                    # NiceGUI dashboard entry point (port 8090)
+├── test_ui.py                   # Playwright visual QA for the dashboard
+├── qa_screenshots/              # QA baseline screenshots
 ├── requirements.txt             # Python dependencies
 ├── YOLO_DETECTOR.md             # Stage 1 documentation
 ├── RISK_CLASSIFIER.md           # Stage 2 documentation
 ├── PRESENT_AGENT.md             # Stage 3a documentation
 ├── FUTURE_AGENT.md              # Stage 3b documentation
+├── DASHBOARD.md                 # NiceGUI dashboard documentation
+├── VIDEO_GENERATION.md          # Test data generation notes
 └── README.md                    # This file
 ```
+
+
+## NiceGUI Dashboard
+
+In addition to the FastAPI server, FireEye includes a standalone NiceGUI web dashboard for interactive demo and diagnostics. It runs the full pipeline end-to-end with live stage progress, result tabs, and visual comparisons.
+
+```bash
+source venv/bin/activate
+pip install "nicegui==3.8.0"
+python ui_app.py
+# Open http://localhost:8090
+```
+
+See [DASHBOARD.md](DASHBOARD.md) for full details on the UI layout, result tabs, and visual QA testing.
 
 
 ## Dependencies
@@ -197,3 +216,8 @@ FireEye/
 - **OpenAI SDK** — OpenRouter API client (OpenAI-compatible)
 - **OpenCV** + **Pillow** + **NumPy** — Image processing
 - **Pydantic** — Data validation and settings management
+- **NiceGUI** — Web dashboard (optional, for `ui_app.py`)
+
+---
+
+*FireEye is part of the [Scaffluent](../README.md) scaffolding safety evaluation platform.*
