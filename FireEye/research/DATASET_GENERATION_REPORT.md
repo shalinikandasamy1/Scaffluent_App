@@ -481,12 +481,40 @@ Training on .153 RTX 3060 (115W power limit for noise control):
 - **.172 Tesla P4:** SGD optimizer, lr=0.01, batch=8
 - Same dataset, different optimizers — will compare convergence and final mAP
 
-### Round 2 Improvements Planned
-- Add fire extinguisher targeted synthetic data
-- Auto-label welding frames with per-class Grounding DINO
-- Clean noisy labels (full-image boxes, tiny boxes)
-- Remove empty background images from noisy sources
-- Train from round 1 best weights for faster convergence
+### Round 2 Training Results (60 epochs, cleaned data)
+
+**Dataset v2 improvements:**
+- Removed 851 full-image false positive boxes
+- Removed 389 empty background images from noisy sources
+- Added 120 fire extinguisher synthetic images (429 labels)
+- Auto-labeled 96 welding frames (2989 labels)
+- Total: 5,902 images (smaller but cleaner than v1's 8,797)
+
+**Run 2 vs Run 1 comparison:**
+| Metric | Run 1 (v1 data) | Run 2 (v2 data) | Change |
+|--------|----------------|----------------|--------|
+| mAP50 | 0.439 | **0.522** | **+19%** |
+| mAP50-95 | 0.272 | **0.322** | **+18%** |
+| Precision | 0.494 | **0.604** | +22% |
+| Recall | 0.453 | 0.472 | +4% |
+| Training time | 41 min | 34 min | Faster |
+
+**Per-class recall improvements:**
+- fire_extinguisher: 0% → **60%** (biggest win)
+- fire: 48% → 53%
+- gas_cylinder: 40% → 46%
+- welding_sparks: 17% → 22%
+- hose_reel: 15% → 20%
+
+**Real image evaluation (29 HK construction fire photos):**
+- Run 1: 112 detections, 3 images with no detections
+- Run 2: **235 detections, 0 images with no detections**
+- Fire detected at up to 0.80 confidence
+- Scaffold nets, safety vests, hard hats all detected correctly
+
+### Parallel Training on .172 Tesla P4 (SGD optimizer)
+Running 50 epochs with SGD (lr=0.01) on Tesla P4 for comparison.
+SGD converges slower but may generalize differently. Results pending.
 
 ## 15. Complete File Inventory
 
