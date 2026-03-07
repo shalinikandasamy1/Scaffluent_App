@@ -51,36 +51,46 @@ def evaluate(heuristic_only: bool = False, output_json: bool = False):
             stored_path = image_store.get_input_image_path(image_id)
 
             t0 = time.time()
+            try:
+                # Stage 1: YOLO
+                t_yolo = time.time()
+                detections = yolo_detector.detect(str(stored_path))
+                timing["yolo"].append(time.time() - t_yolo)
 
-            # Stage 1: YOLO
-            t_yolo = time.time()
-            detections = yolo_detector.detect(str(stored_path))
-            timing["yolo"].append(time.time() - t_yolo)
+                for d in detections:
+                    detection_stats[d.label] += 1
 
-            for d in detections:
-                detection_stats[d.label] += 1
+                # Stage 2: Classification
+                t_cls = time.time()
+                if heuristic_only:
+                    risk = risk_classifier.classify_from_detections(detections)
+                else:
+                    risk = risk_classifier.classify_with_llm(str(stored_path), detections)
+                timing["classify"].append(time.time() - t_cls)
 
-            # Stage 2: Classification
-            t_cls = time.time()
-            if heuristic_only:
-                risk = risk_classifier.classify_from_detections(detections)
-            else:
-                risk = risk_classifier.classify_with_llm(str(stored_path), detections)
-            timing["classify"].append(time.time() - t_cls)
+                timing["total"].append(time.time() - t0)
 
-            timing["total"].append(time.time() - t0)
-
-            passed = risk.risk_level in EXPECTED[category]
-            results.append({
-                "file": img_path.name,
-                "category": category,
-                "risk_level": risk.risk_level.value,
-                "confidence": risk.confidence,
-                "passed": passed,
-                "num_detections": len(detections),
-            })
-
-            image_store.cleanup_image(image_id)
+                passed = risk.risk_level in EXPECTED[category]
+                results.append({
+                    "file": img_path.name,
+                    "category": category,
+                    "risk_level": risk.risk_level.value,
+                    "confidence": risk.confidence,
+                    "passed": passed,
+                    "num_detections": len(detections),
+                })
+            except Exception as e:
+                print(f"  SKIP {img_path.name}: {e}", file=sys.stderr)
+                results.append({
+                    "file": img_path.name,
+                    "category": category,
+                    "risk_level": "error",
+                    "confidence": 0,
+                    "passed": False,
+                    "num_detections": 0,
+                })
+            finally:
+                image_store.cleanup_image(image_id)
 
     # Compute metrics
     total = len(results)
