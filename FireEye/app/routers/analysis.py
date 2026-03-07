@@ -1,5 +1,6 @@
 """Analysis endpoints — trigger the pipeline and retrieve results."""
 
+import asyncio
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
@@ -16,7 +17,7 @@ router = APIRouter(prefix="/analysis", tags=["analysis"])
 async def run_analysis(image_id: UUID) -> AnalysisResult:
     """Trigger the full FireEye pipeline on a previously ingested image."""
     try:
-        result = orchestrator.analyze_image(image_id)
+        result = await asyncio.to_thread(orchestrator.analyze_image, image_id)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Image not found")
     return result

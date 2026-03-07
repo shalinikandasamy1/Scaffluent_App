@@ -25,7 +25,15 @@ def _get_model() -> YOLO:
     if _model is None:
         logger.info("Loading YOLO model: %s", settings.yolo_model_name)
         _model = YOLO(settings.yolo_model_name)
-        _model.to("cpu")
+        device = settings.yolo_device
+        if device == "auto":
+            try:
+                import torch
+                device = "cuda" if torch.cuda.is_available() else "cpu"
+            except ImportError:
+                device = "cpu"
+        _model.to(device)
+        logger.info("YOLO using device: %s", device)
     return _model
 
 
