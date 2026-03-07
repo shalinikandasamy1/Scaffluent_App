@@ -19,3 +19,17 @@ audit_logs/
 
 # Evaluation history
 eval_history.jsonl
+
+# Research datasets (large, do not commit)
+research/DFireDataset/
+research/extinguisher_data/
+research/fireeye_dataset/
+research/weak_class_data/
+research/merged_dataset*/
+research/synthetic_*/
+research/augmented_*/
+research/auto_labeled/
+research/inpainted_*/
+research/severity_*/
+research/eval_run*/
+research/sgd_run*/
