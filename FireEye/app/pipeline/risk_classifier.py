@@ -12,6 +12,7 @@ from app.models.schemas import Detection, RiskClassification, RiskLevel
 from app.pipeline.spatial import format_spatial_summary
 from app.services import openrouter_client
 from app.services.image_utils import encode_image_to_data_uri
+from app.services.prompt_loader import get_system_prompt, get_user_template
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,46 @@ SAFETY_LABELS = {
     "fire_extinguisher", "hose_reel", "exit_sign",
     "hard_hat", "safety_vest",
 }
+
+# Common construction-site fire accidents (FYP Ground Truth booklet)
+# mapped to our 12-class YOLO detection targets and coverage status.
+COMMON_ACCIDENTS = [
+    {
+        "cause": "Sparks from hot works igniting combustibles",
+        "detectable_by": ["welding_sparks", "fire", "scaffold_net", "tarpaulin"],
+        "coverage": "full",
+    },
+    {
+        "cause": "Electrical overload / short circuit",
+        "detectable_by": [],
+        "coverage": "none",  # future: add electrical_panel class
+    },
+    {
+        "cause": "Improper flammable material storage",
+        "detectable_by": ["gas_cylinder"],
+        "coverage": "partial",
+    },
+    {
+        "cause": "Unextinguished cigarette butts",
+        "detectable_by": [],
+        "coverage": "none",  # future: add cigarette class
+    },
+    {
+        "cause": "Lack of fire protection / maintenance",
+        "detectable_by": ["fire_extinguisher", "hose_reel", "exit_sign"],
+        "coverage": "full",
+    },
+    {
+        "cause": "Non-fire-retardant facade coverings",
+        "detectable_by": ["scaffold_net", "tarpaulin"],
+        "coverage": "partial",  # can detect presence but not material type
+    },
+    {
+        "cause": "Incomplete fire service installations",
+        "detectable_by": ["hose_reel", "fire_extinguisher"],
+        "coverage": "partial",
+    },
+]
 
 # JSON schema for the LLM risk classification response
 _RISK_SCHEMA = {
@@ -151,46 +192,20 @@ def classify_with_llm(image_path: str, detections: list[Detection]) -> RiskClass
     spatial_summary = format_spatial_summary(detections)
     data_uri = encode_image_to_data_uri(image_path)
 
+    user_text = get_user_template("risk_classifier").format(
+        detection_summary=detection_summary,
+        spatial_summary=spatial_summary,
+    )
+
     messages = [
         {
             "role": "system",
-            "content": (
-                "You are a fire safety risk classifier for Hong Kong construction sites.\n"
-                "Open flames are NORMAL in many work contexts (welding, cutting torches). "
-                "The presence of a flame alone does NOT indicate critical risk.\n\n"
-                "Classify risk using this HK-regulatory-aligned scale:\n"
-                "  safe     — Fully compliant site. No active flame, fire extinguishers present, "
-                "exits clear, scaffold nets appear fire-retardant.\n"
-                "  low      — Compliant site with controlled hot work. Welding with permit, "
-                "screening in place, extinguisher nearby, 6m combustible clearance met.\n"
-                "  medium   — Minor compliance gaps OR elevated risk. Hot work without visible "
-                "screening, OR combustibles within 6m but not adjacent, OR missing extinguisher.\n"
-                "  high     — Significant compliance gaps OR active danger. Uncontrolled flame, "
-                "gas cylinders near ignition, blocked exits, combustible nets near fire.\n"
-                "  critical — Active fire spread OR cascade risk. Fire spreading to facade nets, "
-                "gas cylinder exposure to flame, multiple simultaneous violations.\n\n"
-                "HK CONSTRUCTION SITE FIRE SAFETY RULES (FSD Circular Letter 2/2008):\n"
-                "- Combustibles must be >= 6m from hot work (welding/cutting)\n"
-                "- Scaffold nets and tarpaulins must be fire-retardant certified\n"
-                "- Gas cylinders (acetylene, oxygen) near ignition = ESCALATE risk\n"
-                "- Fire extinguishers, hose reels = MITIGATING factors (lower risk if present)\n"
-                "- Absence of PPE (hard hats, safety vests) near hot work = procedural concern\n\n"
-                "Base your classification on: flame size/control, proximity of flammable materials "
-                "(especially scaffold nets, tarpaulins), gas cylinder proximity, safety equipment "
-                "presence, and ember/spark travel. Provide confidence (0-1) and concise reason."
-            ),
+            "content": get_system_prompt("risk_classifier"),
         },
         {
             "role": "user",
             "content": [
-                {
-                    "type": "text",
-                    "text": (
-                        f"Detected objects:\n{detection_summary}\n\n"
-                        f"Spatial analysis:\n{spatial_summary}\n\n"
-                        "Classify the fire spread risk for this scene."
-                    ),
-                },
+                {"type": "text", "text": user_text},
                 {"type": "image_url", "image_url": {"url": data_uri}},
             ],
         },

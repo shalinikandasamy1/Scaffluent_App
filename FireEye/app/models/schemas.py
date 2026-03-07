@@ -69,6 +69,28 @@ class PresentAssessment(BaseModel):
     distances: list[str] = Field(default_factory=list)
     compliance_flags: list[ComplianceFlag] = Field(default_factory=list)
 
+    @property
+    def compliance_score(self) -> float:
+        """Compute a 0-1 compliance score from flags.
+
+        present=1.0, unclear=0.5, absent=0.0.
+        Returns 1.0 if no flags (nothing to violate).
+        """
+        if not self.compliance_flags:
+            return 1.0
+        scores = {"present": 1.0, "unclear": 0.5, "absent": 0.0}
+        total = sum(scores.get(f.status, 0.5) for f in self.compliance_flags)
+        return round(total / len(self.compliance_flags), 2)
+
+    @property
+    def compliance_issues(self) -> list[str]:
+        """Return human-readable list of non-compliant items."""
+        return [
+            f"{f.item}: {f.note}" if f.note else f.item
+            for f in self.compliance_flags
+            if f.status in ("absent", "unclear")
+        ]
+
 
 class FutureScenario(BaseModel):
     scenario: str
