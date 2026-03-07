@@ -18,6 +18,7 @@ from app.models.schemas import (
     RiskClassification,
     RiskLevel,
 )
+from app.pipeline.spatial import format_spatial_summary
 from app.services import openrouter_client
 from app.services.image_utils import encode_image_to_data_uri
 
@@ -105,6 +106,7 @@ def assess_present(
         f"[{d.bbox.x1:.0f}, {d.bbox.y1:.0f}, {d.bbox.x2:.0f}, {d.bbox.y2:.0f}]"
         for d in detections
     )
+    spatial_summary = format_spatial_summary(detections)
     data_uri = encode_image_to_data_uri(image_path)
 
     messages = [
@@ -139,6 +141,7 @@ def assess_present(
                     "type": "text",
                     "text": (
                         f"Object detections:\n{detection_summary}\n\n"
+                        f"Spatial analysis:\n{spatial_summary}\n\n"
                         f"Preliminary risk level: {risk.risk_level.value} "
                         f"({risk.reason})\n\n"
                         "Describe the current scene state."
