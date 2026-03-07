@@ -439,7 +439,56 @@ Key findings from 2025 literature on synthetic-to-real transfer for YOLO:
 - Phase 2: Fine-tune on real images only (29 photos + augmented versions) for 20 epochs with lower LR
 - Phase 3: Evaluate on held-out real images, iterate on prompt engineering if domain gap persists
 
-## 14. Complete File Inventory
+## 14. First Training Run & Label Quality Audit
+
+### Merged Dataset v1 (8,797 images)
+- **Sources:** Synthetic SDXL-Turbo (1145) + Construction-PPE (1263) + D-Fire (6000 capped) + Welding (96) + Earlier synthetic/augmented (293)
+- **Train/Val split:** 7,477 / 1,320 images (15% val)
+- **Total labels:** 27,628 bounding boxes
+
+### YOLO11n Training Run 1 (50 epochs, AdamW, lr=0.001)
+Training on .153 RTX 3060 (115W power limit for noise control):
+- Epoch 1: mAP50=0.181, P=0.341, R=0.233
+- Epoch 12: mAP50=0.342, P=0.488, R=0.350
+- Training time: ~52s/epoch (with 115W limit), total ~43 min
+
+### Label Quality Audit Findings
+
+**Critical issues discovered:**
+
+1. **fire_extinguisher (class 2): ZERO labels** across all datasets
+   - Grounding DINO's tokenizer splits "fire extinguisher" → matches "fire" instead
+   - Fix: Targeted generation with `generate_fire_extinguisher_data.py`
+
+2. **291 full-image bounding boxes** in synthetic data
+   - Mostly `welding_sparks` labeled as covering 100% of image
+   - Grounding DINO false positives on synthetic scenes
+   - Fix: `clean_labels.py` removes boxes >90% of image area
+
+3. **389 background-only images** from welding/earlier-synthetic sources
+   - Welding frames (73), synthetic_bulk (111), augmented (16), severity (117)
+   - These add training noise without contributing any positive labels
+   - Fix: Removed in merge_datasets_v2.py
+
+4. **D-Fire: 45% empty files** (2,311 out of 5,095)
+   - Many D-Fire images have no annotations — background/negative images
+   - Fix: skip_empty=True in v2 merge
+
+5. **tarpaulin severely underrepresented** (167 total labels)
+
+### Parallel Training Comparison
+- **.153 RTX 3060:** AdamW optimizer, lr=0.001, batch=16
+- **.172 Tesla P4:** SGD optimizer, lr=0.01, batch=8
+- Same dataset, different optimizers — will compare convergence and final mAP
+
+### Round 2 Improvements Planned
+- Add fire extinguisher targeted synthetic data
+- Auto-label welding frames with per-class Grounding DINO
+- Clean noisy labels (full-image boxes, tiny boxes)
+- Remove empty background images from noisy sources
+- Train from round 1 best weights for faster convergence
+
+## 15. Complete File Inventory
 
 ```
 FireEye/research/
@@ -464,7 +513,14 @@ FireEye/research/
   auto_labeled/                       -- 128 images + YOLO labels + dataset.yaml
   yolo_finetune/poc_run1/             -- 5-epoch fine-tuning results + weights
   fireeye_dataset/                    -- 1000 scene images + severity variations + auto-labels
-  DFireDataset/                       -- D-Fire dataset repo (README only, zip corrupt)
+  DFireDataset/                       -- D-Fire dataset (21,527 images extracted)
+  evaluate_model.py                   -- Post-training evaluation on real images
+  audit_labels.py                     -- Label quality audit tool
+  clean_labels.py                     -- Remove noisy labels (full-image boxes, etc.)
+  merge_datasets_v2.py                -- Improved merge with fire extinguisher + cleaned labels
+  generate_fire_extinguisher_data.py  -- Targeted synthetic data for missing class 2
+  monitor_training.py                 -- Training progress monitor with e-paper updates
+  run_round2.sh                       -- Full pipeline for improved round 2 training
 
 External:
   ~/datasets/construction-ppe/        -- 1,416 PPE images with YOLO labels (downloaded)
