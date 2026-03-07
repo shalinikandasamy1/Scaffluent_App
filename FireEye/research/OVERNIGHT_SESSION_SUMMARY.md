@@ -26,9 +26,9 @@
 | Y | 4.2 | Evaluation metrics script (`evaluate.py`) |
 
 ### Testing
-- **24 unit tests** passing (heuristic classifier, spatial reasoning, compliance scoring)
-- **12 real test images** (7 dangerous, 5 safe) — 100% heuristic accuracy
-- `evaluate.py` with accuracy, false alarm rate, miss rate, timing
+- **38 unit tests** passing (heuristic, spatial, compliance, prompt loader, audit, API smoke)
+- **22 real test images** (12 dangerous, 10 safe) + 1 edge case — 95.5% heuristic accuracy
+- `evaluate.py` with accuracy, false alarm rate, miss rate, timing, `--save` history tracking
 
 ### Infrastructure
 - GPU power restored to 170W on .153
@@ -57,8 +57,12 @@ FireEye/
 │   ├── risk_classifier.yaml    [NEW] Risk classifier prompts
 │   ├── present_agent.yaml      [NEW] Present agent prompts
 │   └── future_agent.yaml       [NEW] Future agent prompts
-├── tests/test_heuristic.py     [NEW] 24 unit tests
-├── evaluate.py                 [NEW] Evaluation metrics
+├── tests/
+│   ├── test_heuristic.py       [NEW] 24 heuristic/spatial/compliance tests
+│   ├── test_services.py        [NEW] 10 prompt loader + audit tests
+│   ├── test_api.py             [NEW] 4 API smoke tests
+│   └── conftest.py             [NEW] Shared fixtures
+├── evaluate.py                 [NEW] Evaluation metrics with --save history
 ├── research/
 │   ├── train_run5.py           [NEW] Run 5 config (imgsz=800, copy_paste=0.3)
 │   └── DATASET_GENERATION_REPORT.md [MOD] Full overnight report
@@ -66,7 +70,7 @@ FireEye/
 └── .env                        [MOD] Fine-tuned model path + threshold
 ```
 
-## Branch: `research/dataset-generation-overnight` (22 commits)
+## Branch: `research/dataset-generation-overnight` (30+ commits)
 
 ## What to do next
 
@@ -75,6 +79,6 @@ FireEye/
    - Compliance score gauge/badge
    - Compliance flags table
    - Audit log viewer
-3. **Run 5 training** (optional): `python research/train_run5.py` — targets weak classes with larger images
+3. **Run 5 training**: In progress — imgsz=800, copy_paste=0.3, mixup=0.15. Compare with `python research/compare_per_class.py run4 run5`
 4. **Collect more test images**: Real HK construction site photos for Phase 4.1
 5. **Test with LLM**: Run `python evaluate.py` (needs API key) to test full pipeline accuracy
