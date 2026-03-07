@@ -18,3 +18,26 @@ Two gaps, six phases.
 Start with Phase 1 today (prompt-only, no code beyond schema). Kick off dataset collection for Phases 2 & 4 in parallel.
 
 Full details in the attached ACTION_PLAN.pdf.
+
+---
+
+## Progress Update (2026-03-08)
+
+Overnight autonomous session completed 10 of ~14 actionable phases:
+
+| Phase | Status |
+|-------|--------|
+| 1. HK regs in prompts + compliance output | **Done** (1.1, 1.2, 1.3) |
+| 2. Custom YOLO + spatial reasoning | **Done** (12-class model, mAP50=0.536, spatial.py) |
+| 3. Risk level alignment + compliance score | **Done** (3.1, 3.2) |
+| 4. Test dataset + evaluation metrics | **Partial** (12 real images, evaluate.py, 100% heuristic accuracy) |
+| 5. Heuristic fallback, YAML prompts, audit logging | **Done** (5.1, 5.2, 5.3) |
+| 6. Video/multi-camera/BIM | Not started (future research) |
+
+Key deliverables:
+- Fine-tuned `fireeye_yolo11n_v4.pt` (12 construction-site fire safety classes)
+- Externalized prompts in `prompts/*.yaml`
+- Audit logging to `audit_logs/*.jsonl`
+- Compliance score computed from regulatory flags
+- Heuristic fallback classifier with HK regulatory rules
+- `evaluate.py` with accuracy, false alarm rate, miss rate metrics
