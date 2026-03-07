@@ -514,7 +514,61 @@ Training on .153 RTX 3060 (115W power limit for noise control):
 
 ### Parallel Training on .172 Tesla P4 (SGD optimizer)
 Running 50 epochs with SGD (lr=0.01) on Tesla P4 for comparison.
-SGD converges slower but may generalize differently. Results pending.
+SGD at epoch 48/50: best mAP50=0.422, mAP50-95=0.255. Converges slower than AdamW and peaks lower.
+
+## 16. Run 3: Weak Class Augmentation
+
+### Problem
+Run 2 confusion matrix revealed 3 classes with critically low recall:
+- **tarpaulin**: 0.05 recall (worst)
+- **hose_reel**: 0.20 recall
+- **welding_sparks**: 0.22 recall
+
+### Approach
+Generated 210 targeted synthetic images (30 tarpaulin + 20 hose_reel + 20 welding_sparks prompts × 3 images) using SDXL-Turbo + Grounding DINO auto-labeling.
+
+### Dataset v3
+- Added weak class data to v2 merge → 6,112 images (5,195 train / 917 val)
+- **Issue discovered post-training:** No NMS was applied to auto-labels, resulting in ~70% duplicate bounding boxes in the weak class data
+
+### Run 3 Results (80 epochs, AdamW)
+
+| Metric | Run 2 | Run 3 | Change |
+|--------|-------|-------|--------|
+| Best mAP50 | 0.522 | 0.521 | -0.2% (flat) |
+| Best mAP50-95 | 0.322 | 0.315 | -2.2% |
+| Best epoch | 45/60 | 62/80 | Later convergence |
+
+**Per-class recall changes (Run 2 → Run 3):**
+- tarpaulin: 0.05 → **0.26** (5.2× improvement!)
+- hose_reel: 0.20 → 0.21 (marginal)
+- welding_sparks: 0.22 → 0.23 (marginal)
+- smoke: 0.58 → 0.62 (improved)
+- fire_extinguisher: 0.60 → 0.62 (maintained)
+
+**Analysis:** The targeted data dramatically improved tarpaulin detection, but duplicate labels (70% were overlapping boxes) diluted the impact for hose_reel and welding_sparks. Overall mAP50 was flat because gains in weak classes were offset by slight regressions in strong classes due to label noise.
+
+## 17. Run 4: NMS-Cleaned Labels (In Progress)
+
+### Fix Applied
+Applied `nms_labels.py` (IoU threshold 0.5) to all weak class label directories:
+- tarpaulin: 780 → 338 labels (56.7% duplicates removed)
+- hose_reel: 1,211 → 360 labels (70.3% duplicates removed)
+- welding_sparks: 966 → 181 labels (81.3% duplicates removed)
+- **Total: 2,078 duplicate labels removed**
+
+### Rebuilt Dataset v3 (post-NMS)
+Same 6,112 images but cleaner labels:
+| Class | Before NMS | After NMS |
+|-------|-----------|-----------|
+| hose_reel | 3,456 | 2,605 |
+| welding_sparks | 2,617 | 1,832 |
+| tarpaulin | 1,265 | 823 |
+
+### Run 4 Training
+- 80 epochs, AdamW, same hyperparameters as Run 3
+- **Hypothesis:** Cleaner labels should improve weak class recall without the label noise that diluted Run 3
+- Results: *pending*
 
 ## 15. Complete File Inventory
 
@@ -549,6 +603,16 @@ FireEye/research/
   generate_fire_extinguisher_data.py  -- Targeted synthetic data for missing class 2
   monitor_training.py                 -- Training progress monitor with e-paper updates
   run_round2.sh                       -- Full pipeline for improved round 2 training
+  generate_weak_class_data.py          -- Targeted synthetic data for tarpaulin/hose_reel/welding_sparks
+  merge_datasets_v3.py                 -- v3 merge with weak class data
+  nms_labels.py                        -- NMS deduplication for auto-generated labels
+  compare_runs.py                      -- Multi-run training comparison tool
+  post_training_v3.sh                  -- Post-training eval pipeline for Run 3
+  wrap_up_overnight.sh                 -- Session cleanup: collect results, restore GPU, e-paper update
+  weak_class_data/                     -- 210 targeted images for tarpaulin/hose_reel/welding_sparks
+  merged_dataset_v3/                   -- 6,112 images with NMS-cleaned labels
+  eval_run3/                           -- Run 3 evaluation on 29 real images
+  sgd_run_results/                     -- .172 Tesla P4 SGD training results
 
 External:
   ~/datasets/construction-ppe/        -- 1,416 PPE images with YOLO labels (downloaded)
@@ -562,6 +626,27 @@ This is a massive improvement from the initial 29 real photos. The merged datase
 - Fire/smoke detection: ~21,500 images (D-Fire) + ~700 synthetic fire scenes
 - PPE detection: ~1,400 images (Construction-PPE) + ~300 synthetic equipment
 - Construction-specific: ~1,000 synthetic + ~245 real + ~96 welding frames
+
+---
+
+## 18. All-Runs Comparison
+
+| Metric | Run 1 (v1) | Run 2 (v2) | Run 3 (v3) | Run 4 (v3+NMS) | .172 SGD |
+|--------|-----------|-----------|-----------|---------------|----------|
+| Dataset | 8,797 imgs | 5,902 imgs | 6,112 imgs | 6,112 imgs | 5,902 imgs |
+| Epochs | 50 | 60 | 80 | 80 (pending) | 50 |
+| Best mAP50 | 0.439 | 0.522 | 0.521 | *pending* | 0.422 |
+| Best mAP50-95 | 0.272 | 0.322 | 0.315 | *pending* | 0.255 |
+| Optimizer | AdamW | AdamW | AdamW | AdamW | SGD |
+| GPU | RTX 3060 | RTX 3060 | RTX 3060 | RTX 3060 | Tesla P4 |
+| Key change | Baseline | Cleaned labels | +weak class data | NMS-cleaned labels | SGD comparison |
+
+**Key insights:**
+1. **Data quality > quantity**: Run 2 (5,902 imgs) beat Run 1 (8,797 imgs) by 19% — cleaning matters more than volume
+2. **Targeted augmentation helps**: Tarpaulin recall jumped 5× with targeted data, even with noisy labels
+3. **Label deduplication is critical**: 70% of auto-generated labels were duplicates — NMS cleanup expected to improve Run 4
+4. **AdamW >> SGD for this task**: AdamW consistently outperforms SGD by ~20% mAP50
+5. **Diminishing returns on epochs**: Best results come at epoch 45-62, not at 80 — consider reducing epochs or using earlier patience
 
 ---
 
