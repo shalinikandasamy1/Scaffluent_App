@@ -38,10 +38,10 @@ PPE_TO_FIREEYE = {
 }
 
 # D-Fire class mapping → FireEye classes
-# D-Fire: 0=fire, 1=smoke
+# D-Fire (Kaggle version): 0=smoke, 1=fire
 DFIRE_TO_FIREEYE = {
-    0: 0,  # fire → fire
-    1: 1,  # smoke → smoke
+    0: 1,  # smoke → smoke (FireEye class 1)
+    1: 0,  # fire → fire (FireEye class 0)
 }
 
 
@@ -154,19 +154,18 @@ def main():
                              weld_lbl if os.path.exists(weld_lbl) else weld_img,
                              staging_img, staging_lbl, prefix="weld_")
 
-    # 4. D-Fire dataset (if downloaded)
-    dfire_base = "/home/evnchn/Scaffluent_App/FireEye/research/DFireDataset"
-    for sub in ["train/images", "images"]:
-        dfire_img = os.path.join(dfire_base, sub)
-        dfire_lbl = dfire_img.replace("images", "labels")
-        if os.path.exists(dfire_img) and any(
-            f.endswith(('.jpg', '.png')) for f in os.listdir(dfire_img)
-        ):
-            total += add_dataset("D-Fire", dfire_img, dfire_lbl,
+    # 4. D-Fire dataset (21,527 fire/smoke images)
+    dfire_base = "/home/evnchn/Scaffluent_App/FireEye/research/DFireDataset/data"
+    for split in ["train", "val"]:
+        dfire_img = os.path.join(dfire_base, split, "images")
+        dfire_lbl = os.path.join(dfire_base, split, "labels")
+        if os.path.exists(dfire_img):
+            # Cap at 3000 per split to avoid overwhelming other classes
+            total += add_dataset(f"D-Fire ({split})", dfire_img, dfire_lbl,
                                  staging_img, staging_lbl,
-                                 class_map=DFIRE_TO_FIREEYE, prefix="dfire_",
-                                 max_images=5000)
-            break
+                                 class_map=DFIRE_TO_FIREEYE,
+                                 prefix=f"dfire_{split}_",
+                                 max_images=3000)
 
     # 5. Earlier synthetic/augmented samples
     for subdir, name in [

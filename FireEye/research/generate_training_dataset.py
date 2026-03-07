@@ -306,7 +306,7 @@ def auto_label(images_dir, labels_dir, threshold=0.20):
             outputs = model(**inputs)
 
         results = processor.post_process_grounded_object_detection(
-            outputs, inputs.input_ids, threshold=threshold,
+            outputs, inputs.input_ids, box_threshold=threshold,
             text_threshold=threshold, target_sizes=[(512, 512)]
         )[0]
 

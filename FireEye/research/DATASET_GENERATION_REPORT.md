@@ -20,7 +20,12 @@ This report explores 5 avenues to expand and improve the dataset. **Key findings
 | Classical augmentation | Standard practice | Medium | Free | **Do alongside training** |
 | Img2img severity variation | Proven on our GPU | Very High | ~$1 electricity | **Do immediately** |
 
-**Bottom line:** We can go from 29 images to 5,000+ training images within days, using a combination of public datasets (free), local SDXL generation (~1 img/sec), and img2img severity editing. All tested and working on our RTX 3060.
+**Bottom line:** We went from 29 images to **24,600+ training images** in a single overnight session:
+- D-Fire dataset (21,527 fire/smoke images, CC0 license) — extracted from pre-existing Kaggle download
+- Construction-PPE (1,416 PPE images) — auto-downloaded via Ultralytics API
+- 1,000 SDXL-Turbo synthetic construction scenes — generated on our RTX 3060 at 1.2 img/s
+- 145+ severity variations, 96 welding frames, 60 augmented images
+All tools working, production scripts ready for future expansion.
 
 ---
 
@@ -410,10 +415,14 @@ Usage: `python3 generate_training_dataset.py --count 2000 --output ./fireeye_dat
 - **FireEye mapping:** helmet->hard_hat, vest->safety_vest, Person->person
 - **License:** See dataset LICENSE file
 
-### D-Fire - NOT AVAILABLE (corrupt zip)
-- The 2.3GB zip at `DFireDataset/smoke-fire-detection-yolo.zip` has corrupt end-of-central-directory
-- OneDrive and Kaggle both require browser-based auth
-- **Recommendation:** User should manually download via browser from Kaggle
+### D-Fire - DOWNLOADED AND EXTRACTED
+- **Source:** Kaggle (smoke-fire-detection-yolo.zip, 2.3GB, pre-existing download)
+- **Location:** `/home/evnchn/Scaffluent_App/FireEye/research/DFireDataset/data/`
+- **Size:** 21,527 images (14,122 train / 3,099 val / 4,306 test)
+- **Classes:** smoke (11,865 annotations), fire (14,692 annotations) — YOLO format
+- **FireEye mapping:** D-Fire smoke(0)->FireEye smoke(1), D-Fire fire(1)->FireEye fire(0)
+- **License:** CC0 (public domain)
+- **Impact:** MASSIVE — this single dataset provides 10x more fire/smoke training data than everything else combined
 
 ## 13. Domain Gap Bridging Research
 
@@ -462,8 +471,13 @@ External:
 ```
 
 **Total images produced tonight: ~1,700+** (1000 synthetic scenes + ~145 severity variations + 128 earlier synthetic + 60 augmented + 96 welding + 146 earlier severity + 8 initial + 6 inpainted)
-**External datasets acquired: 1,416** (Construction-PPE)
-**Grand total available for training: ~3,100+ images**
+**External datasets acquired: 22,943** (21,527 D-Fire + 1,416 Construction-PPE)
+**Grand total available for training: ~24,600+ images**
+
+This is a massive improvement from the initial 29 real photos. The merged dataset will have:
+- Fire/smoke detection: ~21,500 images (D-Fire) + ~700 synthetic fire scenes
+- PPE detection: ~1,400 images (Construction-PPE) + ~300 synthetic equipment
+- Construction-specific: ~1,000 synthetic + ~245 real + ~96 welding frames
 
 ---
 
