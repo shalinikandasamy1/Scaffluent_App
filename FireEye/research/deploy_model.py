@@ -71,6 +71,10 @@ def main():
     if not args.no_eval:
         print("\nRunning heuristic evaluation...")
         sys.path.insert(0, str(FIREEYE_DIR))
+        from app.config import settings
+        from app.pipeline import yolo_detector
+        settings.yolo_model_name = f"models/{name}"
+        yolo_detector._model = None  # Force reload with new weights
         from evaluate import evaluate, save_results
         metrics = evaluate(heuristic_only=True)
         if metrics:

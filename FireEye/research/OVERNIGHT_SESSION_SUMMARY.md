@@ -26,8 +26,9 @@
 | Y | 4.2 | Evaluation metrics script (`evaluate.py`) |
 
 ### Testing
-- **38 unit tests** passing (heuristic, spatial, compliance, prompt loader, audit, API smoke)
-- **22 real test images** (12 dangerous, 10 safe) + 1 edge case — 95.5% heuristic accuracy
+- **46 unit tests** passing (heuristic, spatial, compliance, prompt loader, audit, image_utils, API smoke)
+- **22 real test images** (12 dangerous, 10 safe) + 1 edge case — **100% heuristic accuracy**
+- Fire-on-extinguisher suppression: low-conf (<0.4) "fire" overlapping >50% with fire_extinguisher is filtered
 - `evaluate.py` with accuracy, false alarm rate, miss rate, timing, `--save` history tracking
 
 ### Infrastructure
@@ -60,17 +61,20 @@ FireEye/
 ├── tests/
 │   ├── test_heuristic.py       [NEW] 24 heuristic/spatial/compliance tests
 │   ├── test_services.py        [NEW] 10 prompt loader + audit tests
+│   ├── test_image_utils.py     [NEW] 6 image encoding + resize tests
 │   ├── test_api.py             [NEW] 4 API smoke tests
 │   └── conftest.py             [NEW] Shared fixtures
 ├── evaluate.py                 [NEW] Evaluation metrics with --save history
 ├── research/
 │   ├── train_run5.py           [NEW] Run 5 config (imgsz=800, copy_paste=0.3)
+│   ├── deploy_model.py           [NEW] Model deployment helper
+│   ├── post_training.sh          [NEW] Post-training comparison script
 │   └── DATASET_GENERATION_REPORT.md [MOD] Full overnight report
 ├── models/fireeye_yolo11n_v4.pt [NEW] Best model weights
 └── .env                        [MOD] Fine-tuned model path + threshold
 ```
 
-## Branch: `research/dataset-generation-overnight` (30+ commits)
+## Branch: `research/dataset-generation-overnight` (40+ commits)
 
 ## What to do next
 
