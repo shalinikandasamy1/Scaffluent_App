@@ -96,6 +96,26 @@ class TestHeuristicClassifier:
         result = classify_from_detections(detections)
         assert result.risk_level == RiskLevel.safe
 
+    def test_low_conf_fire_on_extinguisher_suppressed(self):
+        """Low-confidence 'fire' overlapping a fire_extinguisher should be suppressed."""
+        detections = [
+            _det("fire_extinguisher", conf=0.8, x1=250, y1=400, x2=500, y2=640),
+            _det("fire", conf=0.2, x1=257, y1=444, x2=312, y2=512),  # overlaps extinguisher
+            _det("safety_vest", conf=0.8),
+            _det("person", conf=0.8),
+        ]
+        result = classify_from_detections(detections)
+        assert result.risk_level == RiskLevel.safe
+
+    def test_high_conf_fire_not_suppressed(self):
+        """High-confidence fire near extinguisher should NOT be suppressed."""
+        detections = [
+            _det("fire_extinguisher", conf=0.8, x1=250, y1=400, x2=500, y2=640),
+            _det("fire", conf=0.7, x1=257, y1=444, x2=312, y2=512),
+        ]
+        result = classify_from_detections(detections)
+        assert result.risk_level == RiskLevel.medium  # fire + safety = medium
+
 
 # =====================================================================
 # Spatial reasoning tests

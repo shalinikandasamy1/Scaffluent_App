@@ -99,6 +99,39 @@ _RISK_SCHEMA = {
 }
 
 
+def _filter_fire_on_extinguisher(detections: list[Detection]) -> list[Detection]:
+    """Remove low-confidence 'fire' detections that overlap with fire_extinguisher.
+
+    YOLO sometimes misclassifies the red body of a fire extinguisher as 'fire'.
+    If a fire bbox overlaps >50% with any fire_extinguisher bbox and has low
+    confidence, suppress it.
+    """
+    extinguishers = [d for d in detections if d.label == "fire_extinguisher"]
+    if not extinguishers:
+        return detections
+
+    filtered = []
+    for det in detections:
+        if det.label == "fire" and det.confidence < 0.4:
+            # Check IoU with any extinguisher
+            suppress = False
+            for ext in extinguishers:
+                ix1 = max(det.bbox.x1, ext.bbox.x1)
+                iy1 = max(det.bbox.y1, ext.bbox.y1)
+                ix2 = min(det.bbox.x2, ext.bbox.x2)
+                iy2 = min(det.bbox.y2, ext.bbox.y2)
+                inter = max(0, ix2 - ix1) * max(0, iy2 - iy1)
+                fire_area = (det.bbox.x2 - det.bbox.x1) * (det.bbox.y2 - det.bbox.y1)
+                if fire_area > 0 and inter / fire_area > 0.5:
+                    suppress = True
+                    break
+            if not suppress:
+                filtered.append(det)
+        else:
+            filtered.append(det)
+    return filtered
+
+
 def classify_from_detections(detections: list[Detection]) -> RiskClassification:
     """Heuristic risk classification aligned with HK regulatory criteria.
 
@@ -107,6 +140,7 @@ def classify_from_detections(detections: list[Detection]) -> RiskClassification:
     """
     from app.pipeline.spatial import compute_distances, estimate_scale
 
+    detections = _filter_fire_on_extinguisher(detections)
     labels = {d.label.lower() for d in detections}
     has_ignition = bool(labels & IGNITION_LABELS)
     has_flammable = bool(labels & FLAMMABLE_LABELS)
