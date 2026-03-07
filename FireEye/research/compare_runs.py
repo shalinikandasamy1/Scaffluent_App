@@ -55,6 +55,15 @@ def main():
     if os.path.exists(local_run2_path):
         runs["153_AdamW_run2"] = read_results(local_run2_path)
 
+    local_run3 = "/home/evnchn/Scaffluent_App/runs/detect/yolo_finetune/merged_run3/results.csv"
+    if os.path.exists(local_run3):
+        runs["153_AdamW_run3"] = read_results(local_run3)
+
+    # .172 Tesla P4 SGD run
+    sgd_run = "/home/evnchn/fireeye_data/runs/detect/yolo_finetune/merged_sgd_run/results.csv"
+    if os.path.exists(sgd_run):
+        runs["172_SGD_run"] = read_results(sgd_run)
+
     # Also accept CLI paths
     for arg in sys.argv[1:]:
         if os.path.exists(arg):
