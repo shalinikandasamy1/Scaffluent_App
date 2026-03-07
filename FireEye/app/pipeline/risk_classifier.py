@@ -59,42 +59,87 @@ _RISK_SCHEMA = {
 
 
 def classify_from_detections(detections: list[Detection]) -> RiskClassification:
-    """Quick heuristic-based risk classification from YOLO detections."""
-    labels = {d.label.lower() for d in detections}
+    """Heuristic risk classification aligned with HK regulatory criteria.
 
+    Acts as a deterministic fallback when the LLM is unavailable.
+    Uses spatial proximity data when available.
+    """
+    from app.pipeline.spatial import compute_distances, estimate_scale
+
+    labels = {d.label.lower() for d in detections}
     has_ignition = bool(labels & IGNITION_LABELS)
     has_flammable = bool(labels & FLAMMABLE_LABELS)
     has_hazardous = bool(labels & HAZARDOUS_LABELS)
     has_safety = bool(labels & SAFETY_LABELS)
 
-    if has_ignition and has_flammable:
-        level = RiskLevel.high
-        if has_safety:
-            level = RiskLevel.medium
-            reason = (
-                "Ignition source near flammable material, but safety equipment present. "
-                f"Hazards: {labels & IGNITION_LABELS | labels & FLAMMABLE_LABELS}, "
-                f"Safety: {labels & SAFETY_LABELS}"
+    # Check for gas cylinder near ignition — CRITICAL per FSD CL 2/2008
+    if has_ignition and "gas_cylinder" in labels:
+        distances = compute_distances(detections)
+        gas_near_fire = any(
+            d["safety_concern"] and "gas_cylinder" in d["obj_a"] + d["obj_b"]
+            for d in distances
+        )
+        if gas_near_fire:
+            return RiskClassification(
+                risk_level=RiskLevel.critical,
+                confidence=0.9,
+                reason="Gas cylinder detected near ignition source — explosion risk per FSD CL 2/2008.",
             )
-        else:
-            reason = "Both ignition source and flammable material detected without visible safety equipment."
-        return RiskClassification(risk_level=level, confidence=0.8, reason=reason)
+
+    # Ignition + flammable (scaffold net / tarpaulin)
+    if has_ignition and has_flammable:
+        # Check if safety equipment mitigates
+        if has_safety and "fire_extinguisher" in labels:
+            return RiskClassification(
+                risk_level=RiskLevel.medium,
+                confidence=0.7,
+                reason="Ignition near flammable material, but fire extinguisher present.",
+            )
+        return RiskClassification(
+            risk_level=RiskLevel.high,
+            confidence=0.8,
+            reason="Ignition source near flammable material (scaffold net/tarpaulin) without visible fire extinguisher.",
+        )
+
+    # Fire/smoke detected but no flammable nearby
+    if "fire" in labels:
+        if has_safety:
+            return RiskClassification(
+                risk_level=RiskLevel.medium,
+                confidence=0.7,
+                reason="Fire detected but safety equipment visible.",
+            )
+        return RiskClassification(
+            risk_level=RiskLevel.high,
+            confidence=0.8,
+            reason="Fire detected without visible safety equipment.",
+        )
+
     if has_hazardous:
         return RiskClassification(
             risk_level=RiskLevel.medium,
             confidence=0.7,
             reason=f"Hazardous object(s) detected: {labels & HAZARDOUS_LABELS}",
         )
+
     if has_flammable:
         return RiskClassification(
             risk_level=RiskLevel.low,
             confidence=0.6,
             reason="Flammable materials present but no ignition source detected.",
         )
+
+    if has_safety and not has_hazardous:
+        return RiskClassification(
+            risk_level=RiskLevel.safe,
+            confidence=0.9,
+            reason="Safety equipment present, no hazards detected. Site appears compliant.",
+        )
+
     return RiskClassification(
         risk_level=RiskLevel.safe,
-        confidence=0.9,
-        reason="No obvious fire hazards detected by object detection.",
+        confidence=0.8,
+        reason="No fire hazards detected by object detection.",
     )
 
 
