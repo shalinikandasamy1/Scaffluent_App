@@ -1,0 +1,15 @@
+# Model weights
+models/*.pt
+*.pt
+
+# Environment
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Images
+images/input/
+images/output/

@@ -57,10 +57,17 @@ class RiskClassification(BaseModel):
 # LLM agent outputs
 # ---------------------------------------------------------------------------
 
+class ComplianceFlag(BaseModel):
+    item: str
+    status: str  # "present" | "absent" | "unclear"
+    note: str = ""
+
+
 class PresentAssessment(BaseModel):
     summary: str
     hazards: list[str] = Field(default_factory=list)
     distances: list[str] = Field(default_factory=list)
+    compliance_flags: list[ComplianceFlag] = Field(default_factory=list)
 
 
 class FutureScenario(BaseModel):
