@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 
 # ---------------------------------------------------------------------------
@@ -69,6 +69,7 @@ class PresentAssessment(BaseModel):
     distances: list[str] = Field(default_factory=list)
     compliance_flags: list[ComplianceFlag] = Field(default_factory=list)
 
+    @computed_field
     @property
     def compliance_score(self) -> float:
         """Compute a 0-1 compliance score from flags.
@@ -82,6 +83,7 @@ class PresentAssessment(BaseModel):
         total = sum(scores.get(f.status, 0.5) for f in self.compliance_flags)
         return round(total / len(self.compliance_flags), 2)
 
+    @computed_field
     @property
     def compliance_issues(self) -> list[str]:
         """Return human-readable list of non-compliant items."""

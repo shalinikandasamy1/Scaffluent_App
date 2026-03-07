@@ -17,3 +17,6 @@ openai
 opencv-python
 numpy
 Pillow
+
+# Prompt configuration
+pyyaml

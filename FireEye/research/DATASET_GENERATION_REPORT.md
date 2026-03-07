@@ -671,6 +671,41 @@ This is a massive improvement from the initial 29 real photos. The merged datase
 
 ---
 
+## 19. Action Plan Implementation (Code-Only Phases)
+
+After completing model training, the remaining session time was used to implement
+code-only phases from the Action Plan that required no API calls.
+
+### Phases completed (total: 10 of ~14 actionable phases)
+
+| Phase | Description | Status |
+|-------|-------------|--------|
+| 1.1 | Inject HK regulatory rules into LLM prompts | Done |
+| 1.2 | Add ComplianceFlag schema to PresentAssessment | Done |
+| 1.3 | Map 7 common accidents to detection targets | Done |
+| 2.1 | Fine-tune custom YOLO model (12 classes) | Done (Run 4) |
+| 2.2 | Spatial reasoning pre-processing (distances, scale) | Done |
+| 3.1 | Align risk levels with HK regulatory framework | Done |
+| 3.2 | Compliance score (computed from flags) | Done |
+| 5.1 | Heuristic fallback classifier with regulatory rules | Done |
+| 5.2 | Externalize prompts to YAML config files | Done |
+| 5.3 | Audit logging (JSONL per-day with timings) | Done |
+
+### New files created
+- `app/pipeline/spatial.py` — pairwise distance computation, scale estimation
+- `app/services/audit.py` — audit record collection and JSONL writing
+- `app/services/prompt_loader.py` — YAML prompt loading with caching
+- `prompts/risk_classifier.yaml` — risk classifier system prompt + template
+- `prompts/present_agent.yaml` — present agent system prompt + template
+- `prompts/future_agent.yaml` — future agent system prompt + template
+
+### Remaining phases (for future work)
+- Phase 4.1: Ground-truth-aligned test dataset (need images)
+- Phase 4.2: Quantitative evaluation metrics
+- Phase 6.x: Video/temporal analysis, multi-camera fusion
+
+---
+
 ## References
 
 - D-Fire: https://github.com/gaiasd/DFireDataset
