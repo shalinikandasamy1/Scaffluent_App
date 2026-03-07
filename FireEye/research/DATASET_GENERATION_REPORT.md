@@ -565,10 +565,30 @@ Same 6,112 images but cleaner labels:
 | welding_sparks | 2,617 | 1,832 |
 | tarpaulin | 1,265 | 823 |
 
-### Run 4 Training
-- 80 epochs, AdamW, same hyperparameters as Run 3
-- **Hypothesis:** Cleaner labels should improve weak class recall without the label noise that diluted Run 3
-- Results: *pending*
+### Run 4 Results (80 epochs, AdamW, NMS-cleaned)
+
+| Metric | Run 2 | Run 3 | Run 4 | Change (R4 vs R2) |
+|--------|-------|-------|-------|-------------------|
+| Best mAP50 | 0.522 | 0.521 | **0.536** | **+2.7%** |
+| Best mAP50-95 | 0.322 | 0.322 | **0.332** | **+3.1%** |
+| Recall | 0.473 | 0.463 | **0.509** | **+7.6%** |
+| Best epoch | 58 | 62 | 79 | |
+
+**Per-class mAP50 improvements (Run 3 → Run 4):**
+- tarpaulin: 0.26 → **0.462** (78% improvement)
+- welding_sparks: 0.23 → **0.516** (124% improvement)
+- hose_reel: 0.21 → **0.284** (35% improvement)
+- smoke: 0.62 → **0.674** (8.7% improvement)
+- fire_extinguisher: 0.62 → 0.617 (maintained)
+- hard_hat: 0.70 → **0.698** (maintained)
+- safety_vest: 0.66 → **0.704** (6.7% improvement)
+
+**Real image evaluation (29 HK construction fire photos):**
+- Run 4: **176 detections**, 1 image with no detections
+- 10 different classes detected (all except fire_extinguisher, tarpaulin)
+- Fire confidence up to 0.86, scaffold_net up to 0.83
+
+**Key insight:** NMS-cleaning the auto-generated labels was the single most impactful intervention of the night. Removing 2,078 duplicate bounding boxes (56-81% of weak class labels) allowed the model to learn from clean signal rather than noise. This confirms the "data quality > quantity" principle.
 
 ## 15. Complete File Inventory
 
@@ -634,11 +654,12 @@ This is a massive improvement from the initial 29 real photos. The merged datase
 | Metric | Run 1 (v1) | Run 2 (v2) | Run 3 (v3) | Run 4 (v3+NMS) | .172 SGD |
 |--------|-----------|-----------|-----------|---------------|----------|
 | Dataset | 8,797 imgs | 5,902 imgs | 6,112 imgs | 6,112 imgs | 5,902 imgs |
-| Epochs | 50 | 60 | 80 | 80 (pending) | 50 |
-| Best mAP50 | 0.439 | 0.522 | 0.521 | *pending* | 0.422 |
-| Best mAP50-95 | 0.272 | 0.322 | 0.315 | *pending* | 0.255 |
+| Epochs | 50 | 60 | 80 | 80 | 50 |
+| Best mAP50 | 0.439 | 0.522 | 0.521 | **0.536** | 0.422 |
+| Best mAP50-95 | 0.272 | 0.322 | 0.315 | **0.332** | 0.255 |
 | Optimizer | AdamW | AdamW | AdamW | AdamW | SGD |
 | GPU | RTX 3060 | RTX 3060 | RTX 3060 | RTX 3060 | Tesla P4 |
+| Recall | 0.453 | 0.473 | 0.463 | **0.509** | 0.416 |
 | Key change | Baseline | Cleaned labels | +weak class data | NMS-cleaned labels | SGD comparison |
 
 **Key insights:**
