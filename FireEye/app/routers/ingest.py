@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, File, Form, UploadFile
 
-from app.models.schemas import ImageMetadata, IngestResponse, SourceType
+from app.models.schemas import IngestResponse, SourceType
 from app.storage import image_store
 
 router = APIRouter(prefix="/ingest", tags=["ingest"])

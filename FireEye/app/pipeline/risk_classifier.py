@@ -138,7 +138,7 @@ def classify_from_detections(detections: list[Detection]) -> RiskClassification:
     Acts as a deterministic fallback when the LLM is unavailable.
     Uses spatial proximity data when available.
     """
-    from app.pipeline.spatial import compute_distances, estimate_scale
+    from app.pipeline.spatial import compute_distances
 
     detections = _filter_fire_on_extinguisher(detections)
     labels = {d.label.lower() for d in detections}

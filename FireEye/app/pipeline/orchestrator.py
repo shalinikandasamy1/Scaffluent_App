@@ -12,8 +12,8 @@ import logging
 from pathlib import Path
 from uuid import UUID
 
-from app.models.schemas import AnalysisResult, RiskLevel
-from app.pipeline import llm_agents, risk_classifier, spatial, yolo_detector
+from app.models.schemas import AnalysisResult
+from app.pipeline import llm_agents, risk_classifier, yolo_detector
 from app.services.audit import AuditRecord, write_audit
 from app.storage import image_store
 
