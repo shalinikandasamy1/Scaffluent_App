@@ -14,6 +14,7 @@ import json
 import sys
 import time
 from collections import defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
@@ -190,10 +191,26 @@ def evaluate(heuristic_only: bool = False, output_json: bool = False):
     return metrics
 
 
+def save_results(metrics: dict):
+    """Append evaluation results to a JSONL history file."""
+    history_file = Path(__file__).resolve().parent / "eval_history.jsonl"
+    entry = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        **metrics,
+    }
+    with open(history_file, "a") as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    print(f"\nResults saved to {history_file}")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="FireEye evaluation")
     parser.add_argument("--json", action="store_true", help="Output JSON")
     parser.add_argument("--heuristic-only", action="store_true",
                         help="Use heuristic classifier only (no LLM)")
+    parser.add_argument("--save", action="store_true",
+                        help="Append results to eval_history.jsonl")
     args = parser.parse_args()
-    evaluate(heuristic_only=args.heuristic_only, output_json=args.json)
+    metrics = evaluate(heuristic_only=args.heuristic_only, output_json=args.json)
+    if args.save and metrics:
+        save_results(metrics)

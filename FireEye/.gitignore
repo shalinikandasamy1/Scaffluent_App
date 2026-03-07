@@ -16,3 +16,6 @@ images/output/
 
 # Audit logs
 audit_logs/
+
+# Evaluation history
+eval_history.jsonl
