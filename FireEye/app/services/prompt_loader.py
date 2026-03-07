@@ -50,3 +50,8 @@ def get_system_prompt(name: str) -> str:
 def get_user_template(name: str) -> str:
     """Get the user message template for a given agent."""
     return load_prompt(name)["user_template"]
+
+
+def reload_prompts() -> None:
+    """Clear the prompt cache, forcing reload from disk on next access."""
+    load_prompt.cache_clear()
