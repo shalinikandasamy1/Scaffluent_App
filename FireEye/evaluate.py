@@ -210,7 +210,16 @@ if __name__ == "__main__":
                         help="Use heuristic classifier only (no LLM)")
     parser.add_argument("--save", action="store_true",
                         help="Append results to eval_history.jsonl")
+    parser.add_argument("--model", type=str, default=None,
+                        help="Override YOLO model path (e.g. models/fireeye_yolo11n_v5.pt)")
     args = parser.parse_args()
+
+    if args.model:
+        # Override the model path before evaluation
+        settings.yolo_model_name = args.model
+        # Force model reload
+        yolo_detector._model = None
+
     metrics = evaluate(heuristic_only=args.heuristic_only, output_json=args.json)
     if args.save and metrics:
         save_results(metrics)
