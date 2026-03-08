@@ -257,3 +257,64 @@ VRAM usage (model weights only, Q4):
 - [APXML: GPU Requirements for Gemma 3](https://apxml.com/posts/gemma-3-gpu-requirements)
 - [Roboflow: Best Local Vision-Language Models](https://blog.roboflow.com/local-vision-language-models/)
 - [DataCamp: Top 10 Vision Language Models 2026](https://www.datacamp.com/blog/top-vision-language-models)
+
+---
+
+## Benchmark: 3B vs 7B
+
+**Date:** 2026-03-08
+**Hardware:** RTX 3060 12GB, Ollama, YOLO + VLM sharing GPU
+**Test set:** 22 images (12 dangerous, 10 safe)
+**Pipeline:** YOLO v5 detection -> VLM risk classification (Stage 2 only)
+
+### Results Summary
+
+| Metric | qwen2.5vl:7b | qwen2.5vl:3b |
+|--------|-------------|-------------|
+| **Accuracy** | **100.0%** | 86.4% |
+| Dangerous correct | 12/12 (100%) | 9/12 (75%) |
+| Safe correct | 10/10 (100%) | 10/10 (100%) |
+| False alarm rate | 0.0% | 0.0% |
+| Miss rate | 0.0% | 8.3% |
+| Errors | 0 | 2 |
+| Avg time/image | 16.76s | 6.12s |
+| Avg classify time | 16.65s | 6.08s |
+| VRAM (weights) | ~6.0 GB | ~3.2 GB |
+| GPU layers loaded | ~all | 21/29 (partial CPU offload) |
+
+### 3B Failure Details
+
+1. **01_dfire.jpg** -- Model load failure (HTTP 500). Ollama needed to evict cached models and partially offload to CPU. First image after cold start failed; subsequent images worked.
+2. **04_dfire.jpg** -- Misclassified as `low` (0.70 confidence) instead of `high`/`critical`. This image contains only smoke with no visible flames; the 3B model lacks the nuance to flag smoke-only scenes as dangerous.
+3. **09_central_fire_skyline.png** -- JSON parse failure ("Unterminated string"). The 3B model produced malformed structured output on a complex urban fire scene. Failed on both retry attempts.
+
+### 7B Risk Level Distribution
+
+The 7B model showed much stronger confidence and risk differentiation:
+- Dangerous images: 9 critical, 3 high (all correct)
+- Safe images: 8 safe, 2 low (all correct)
+
+### 3B Risk Level Distribution
+
+The 3B model was more conservative and less discriminating:
+- Dangerous images: 9 high, 1 low, 2 errors (weaker confidence, never used "critical")
+- Safe images: 10 low (never used "safe", everything was "low")
+
+### Analysis
+
+**Speed advantage is real but insufficient.** The 3B model is ~2.7x faster (6.1s vs 16.8s per image), but the accuracy drop from 100% to 86.4% is unacceptable for a safety-critical application. Three images failed out of 22.
+
+**Structured output reliability is a concern.** The 3B model produced unterminated JSON on at least one image, which the 7B model handled without issue. This is consistent with smaller models having weaker instruction-following for constrained output formats.
+
+**VRAM contention matters.** Both models share the GPU with the YOLO model (~400MB). The 3B model still needed partial CPU offload (21/29 layers on GPU), causing a cold-start failure. The 7B model somehow managed to load fully but was significantly slower, likely due to the same VRAM pressure.
+
+**Risk calibration is worse.** The 3B model never assigned "critical" or "safe" -- it operated only in the "high" and "low" range, losing important risk granularity. The 7B model correctly used the full spectrum.
+
+### Recommendation
+
+**Do not use qwen2.5vl:3b on the RTX 3060 for production.** The 7B model is the minimum viable local model for fire safety classification. The 3B model may still be appropriate for the Tesla P4 8GB as a fallback/triage model, but its results should be treated as provisional and flagged for human review.
+
+For latency-sensitive deployments, consider:
+1. Pre-warming the Ollama model before the first request
+2. Reducing YOLO VRAM usage (e.g., FP16 inference, smaller input resolution)
+3. Using the heuristic classifier as a fast first pass, only invoking the VLM for ambiguous cases
