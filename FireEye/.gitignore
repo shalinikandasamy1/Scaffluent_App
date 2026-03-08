@@ -1,6 +1,7 @@
 # Model weights
 models/*.pt
 *.pt
+!research/yolo_finetune/**/weights/best.pt
 
 # Environment
 .env
@@ -35,5 +36,5 @@ research/eval_run*/
 research/sgd_run*/
 research/welding_frames/
 research/welding_labels/
-research/yolo_finetune/
+research/yolo_finetune/**/weights/last.pt
 research/run5_monitor.log
