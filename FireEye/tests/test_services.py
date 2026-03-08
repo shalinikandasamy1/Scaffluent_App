@@ -101,6 +101,35 @@ class TestAuditRecord:
         assert last["risk_level"] == "safe"
 
 
+class TestModelAdapters:
+    def test_default_adapter_no_model(self):
+        from app.services.prompt_loader import get_system_prompt
+        prompt = get_system_prompt("risk_classifier")
+        assert "fire safety" in prompt.lower()
+        # No model name = no adapter appended
+        assert "MUST respond with ONLY" not in prompt
+
+    def test_adapter_for_qwen(self):
+        from app.services.prompt_loader import get_system_prompt
+        prompt = get_system_prompt("risk_classifier", "qwen2.5vl:7b")
+        assert "fire safety" in prompt.lower()
+        # Should have adapter JSON instruction appended
+        assert "JSON" in prompt
+
+    def test_adapter_for_unknown_model_uses_default(self):
+        from app.services.prompt_loader import get_system_prompt
+        prompt = get_system_prompt("risk_classifier", "some-unknown-model")
+        assert "fire safety" in prompt.lower()
+        # Default adapter has a JSON instruction
+        assert "JSON" in prompt
+
+    def test_adapter_prefix_match(self):
+        from app.services.prompt_loader import get_system_prompt
+        # "gemma3:12b" should match "gemma3" adapter prefix
+        prompt = get_system_prompt("risk_classifier", "gemma3:12b")
+        assert "single JSON object" in prompt
+
+
 class TestCommonAccidents:
     def test_common_accidents_structure(self):
         from app.pipeline.risk_classifier import COMMON_ACCIDENTS

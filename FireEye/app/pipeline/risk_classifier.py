@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 
+from app.config import settings
 from app.models.schemas import Detection, RiskClassification, RiskLevel
 from app.pipeline.spatial import format_spatial_summary
 from app.services import openrouter_client
@@ -234,7 +235,7 @@ def classify_with_llm(image_path: str, detections: list[Detection]) -> RiskClass
     messages = [
         {
             "role": "system",
-            "content": get_system_prompt("risk_classifier"),
+            "content": get_system_prompt("risk_classifier", settings.local_llm_model if settings.llm_backend == "local" else ""),
         },
         {
             "role": "user",

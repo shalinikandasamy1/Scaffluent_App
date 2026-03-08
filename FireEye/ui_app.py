@@ -33,6 +33,7 @@ from nicegui import events, ui
 from app.config import settings
 from app.models.schemas import AnalysisResult
 from app.pipeline import llm_agents, risk_classifier, yolo_detector
+from app.pipeline.spatial import compute_distances, estimate_scale
 from app.storage import image_store
 
 # ── Rengoku flame palette ──────────────────────────────────────────────────────
@@ -69,6 +70,25 @@ RENGOKU_CSS = """
     ) !important;
     border-left: 4px solid var(--rengoku-gold) !important;
   }
+  .compliance-gauge {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold; font-size: 1.25rem;
+  }
+  .compliance-good   { background: conic-gradient(#22c55e var(--pct), #e5e7eb var(--pct)); }
+  .compliance-warn   { background: conic-gradient(#f97316 var(--pct), #e5e7eb var(--pct)); }
+  .compliance-bad    { background: conic-gradient(#ef4444 var(--pct), #e5e7eb var(--pct)); }
+  .compliance-inner  {
+    width: 60px; height: 60px; border-radius: 50%;
+    background: white; display: flex; align-items: center;
+    justify-content: center; font-size: 0.9rem; font-weight: 700;
+  }
+  .dark .compliance-inner { background: #1d1d1d; }
+  .flag-present { color: #22c55e; }
+  .flag-absent  { color: #ef4444; }
+  .flag-unclear { color: #f97316; }
+  .proximity-concern { background: rgba(239,68,68,0.08) !important; }
 </style>
 """
 
@@ -186,6 +206,20 @@ def index() -> None:
                         "Notes", value=""
                     ).props("rows=2").classes("w-full")
 
+                    # LLM backend selector
+                    _has_local = bool(settings.local_llm_url)
+                    _backend_options = ["openrouter"]
+                    if _has_local:
+                        _backend_options.append("local")
+                    backend_select = ui.select(
+                        _backend_options,
+                        value=settings.llm_backend if settings.llm_backend in _backend_options else "openrouter",
+                        label="LLM Backend",
+                    ).classes("w-full").tooltip(
+                        f"Local: {settings.local_llm_model or 'N/A'}" if _has_local
+                        else "Set FIREEYE_LOCAL_LLM_URL to enable local"
+                    )
+
                     with ui.row().classes("w-full items-center gap-2 mt-1"):
                         analyze_btn = ui.button(
                             "Analyze", icon="manage_search", color="primary",
@@ -217,11 +251,13 @@ def index() -> None:
             with ui.column().classes("w-full gap-0"):
 
                 with ui.tabs().classes("w-full bg-grey-1") as tabs:
-                    tab_overview   = ui.tab("Overview",   icon="dashboard")
-                    tab_images     = ui.tab("Images",     icon="image")
-                    tab_detections = ui.tab("Detections", icon="label")
-                    tab_assessment = ui.tab("Assessment", icon="psychology")
-                    tab_raw        = ui.tab("Raw JSON",   icon="data_object")
+                    tab_overview    = ui.tab("Overview",    icon="dashboard")
+                    tab_images      = ui.tab("Images",      icon="image")
+                    tab_detections  = ui.tab("Detections",  icon="label")
+                    tab_compliance  = ui.tab("Compliance",  icon="verified")
+                    tab_assessment  = ui.tab("Assessment",  icon="psychology")
+                    tab_audit       = ui.tab("Audit Log",   icon="history")
+                    tab_raw         = ui.tab("Raw JSON",    icon="data_object")
 
                 with ui.tab_panels(tabs, value=tab_overview).classes("w-full"):
 
@@ -245,11 +281,23 @@ def index() -> None:
                         with det_col:
                             ui.label("No detections yet.").classes("text-grey-6")
 
+                    # Compliance ─────────────────────────────────────────────
+                    with ui.tab_panel(tab_compliance):
+                        compliance_col = ui.column().classes("w-full gap-4 p-4")
+                        with compliance_col:
+                            ui.label("No compliance data yet.").classes("text-grey-6")
+
                     # Assessment ───────────────────────────────────────────────
                     with ui.tab_panel(tab_assessment):
                         assess_col = ui.column().classes("w-full gap-4 p-4")
                         with assess_col:
                             ui.label("No assessment yet.").classes("text-grey-6")
+
+                    # Audit Log ────────────────────────────────────────────────
+                    with ui.tab_panel(tab_audit):
+                        audit_col = ui.column().classes("w-full gap-4 p-4")
+                        with audit_col:
+                            ui.label("No audit logs yet.").classes("text-grey-6")
 
                     # Raw JSON ─────────────────────────────────────────────────
                     with ui.tab_panel(tab_raw):
@@ -299,6 +347,17 @@ def index() -> None:
                 )
                 ui.label(timing_str).classes("text-xs text-grey-5 ml-auto")
 
+            # ── backend info ─────────────────────────────────────────────
+            backend = settings.llm_backend
+            model = settings.local_llm_model if backend == "local" else settings.llm_model
+            with ui.row().classes("items-center gap-2 w-full"):
+                ui.icon("smart_toy", size="xs").classes("text-grey-5")
+                ui.label(f"LLM: {model}").classes("text-xs text-grey-5")
+                ui.badge(
+                    "LOCAL" if backend == "local" else "CLOUD",
+                    color="blue" if backend == "local" else "grey",
+                ).props("dense").classes("text-xs")
+
             # ── risk reason ───────────────────────────────────────────────────
             if risk:
                 with ui.card().classes("w-full rengoku-accent-card"):
@@ -308,8 +367,35 @@ def index() -> None:
                     ui.separator()
                     ui.label(risk.reason).classes("mt-1")
 
-            # ── present assessment ────────────────────────────────────────────
+            # ── compliance score (inline) ────────────────────────────────────
             pa = result.present_assessment
+            if pa:
+                score = pa.compliance_score
+                pct = f"{score * 100:.0f}%"
+                gauge_cls = (
+                    "compliance-good" if score >= 0.8
+                    else "compliance-warn" if score >= 0.5
+                    else "compliance-bad"
+                )
+                with ui.row().classes("items-center gap-4 w-full"):
+                    with ui.element("div").classes(f"compliance-gauge {gauge_cls}").style(
+                        f"--pct: {score * 100:.0f}%"
+                    ):
+                        with ui.element("div").classes("compliance-inner"):
+                            ui.label(pct)
+                    with ui.column().classes("gap-1"):
+                        ui.label("Compliance Score").classes("font-semibold")
+                        issues = pa.compliance_issues
+                        if issues:
+                            ui.label(f"{len(issues)} issue(s) found").classes(
+                                "text-sm text-negative"
+                            )
+                        else:
+                            ui.label("All checks passed").classes(
+                                "text-sm text-positive"
+                            )
+
+            # ── present assessment ────────────────────────────────────────────
             if pa:
                 with ui.card().classes("w-full"):
                     ui.label("Scene summary").classes("font-semibold")
@@ -434,6 +520,133 @@ def index() -> None:
                     "text-sm px-2 py-1"
                 )
 
+    def _render_compliance(result: AnalysisResult) -> None:
+        compliance_col.clear()
+        with compliance_col:
+            pa = result.present_assessment
+            if not pa or not pa.compliance_flags:
+                ui.label("No compliance flags available.").classes("text-grey-6")
+                return
+
+            # Score summary
+            score = pa.compliance_score
+            score_color = (
+                "positive" if score >= 0.8
+                else "warning" if score >= 0.5
+                else "negative"
+            )
+            with ui.row().classes("items-center gap-3 w-full"):
+                ui.badge(
+                    f"Score: {score:.0%}", color=score_color
+                ).classes("text-sm px-3 py-1")
+                ui.label(
+                    f"{len(pa.compliance_flags)} item(s) checked"
+                ).classes("text-sm text-grey-7")
+
+            # Compliance flags table
+            FLAG_ICON = {
+                "present": ("check_circle", "positive"),
+                "absent": ("cancel", "negative"),
+                "unclear": ("help", "warning"),
+            }
+
+            ui.label("Regulatory Compliance Flags").classes(
+                "text-base font-semibold mt-2"
+            )
+            columns = [
+                {"name": "status_icon", "label": "", "field": "status_icon", "align": "center"},
+                {"name": "item", "label": "Item", "field": "item", "align": "left", "sortable": True},
+                {"name": "status", "label": "Status", "field": "status", "align": "center", "sortable": True},
+                {"name": "note", "label": "Note", "field": "note", "align": "left"},
+            ]
+            rows = []
+            for i, f in enumerate(pa.compliance_flags):
+                icon_name, _ = FLAG_ICON.get(f.status, ("help", "grey"))
+                rows.append({
+                    "id": i,
+                    "status_icon": icon_name,
+                    "item": f.item,
+                    "status": f.status.upper(),
+                    "note": f.note or "—",
+                })
+            ui.table(columns=columns, rows=rows, row_key="id").classes(
+                "w-full"
+            ).props("flat bordered dense")
+
+            # Issues summary
+            issues = pa.compliance_issues
+            if issues:
+                ui.label("Issues Requiring Attention").classes(
+                    "text-base font-semibold text-negative mt-4"
+                )
+                for issue in issues:
+                    with ui.row().classes("items-start gap-1"):
+                        ui.icon("error_outline", size="xs", color="red")
+                        ui.label(issue).classes("text-sm")
+
+    def _render_audit_log() -> None:
+        audit_col.clear()
+        with audit_col:
+            audit_dir = settings.base_dir / "audit_logs"
+            if not audit_dir.exists():
+                ui.label("No audit logs found.").classes("text-grey-6")
+                return
+
+            # Find all JSONL files, sorted newest first
+            files = sorted(audit_dir.glob("audit_*.jsonl"), reverse=True)
+            if not files:
+                ui.label("No audit log entries yet.").classes("text-grey-6")
+                return
+
+            ui.label(f"{len(files)} audit log file(s)").classes(
+                "text-sm text-grey-7"
+            )
+
+            # Read and display the most recent entries (up to 50)
+            entries: list[dict] = []
+            for f in files:
+                for line in f.read_text().strip().split("\n"):
+                    if line.strip():
+                        try:
+                            entries.append(json.loads(line))
+                        except json.JSONDecodeError:
+                            pass
+                if len(entries) >= 50:
+                    break
+            entries.reverse()  # newest first
+
+            if not entries:
+                ui.label("Audit files exist but contain no valid entries.").classes(
+                    "text-grey-6"
+                )
+                return
+
+            columns = [
+                {"name": "time", "label": "Time", "field": "time", "align": "left", "sortable": True},
+                {"name": "image", "label": "Image", "field": "image", "align": "left"},
+                {"name": "risk", "label": "Risk", "field": "risk", "align": "center", "sortable": True},
+                {"name": "compliance", "label": "Compliance", "field": "compliance", "align": "center"},
+                {"name": "detections", "label": "Detections", "field": "detections", "align": "center"},
+                {"name": "total_s", "label": "Time (s)", "field": "total_s", "align": "right", "sortable": True},
+                {"name": "error", "label": "Error", "field": "error", "align": "left"},
+            ]
+            rows = []
+            for i, e in enumerate(entries[:50]):
+                cs = e.get("compliance_score")
+                rows.append({
+                    "id": i,
+                    "time": e.get("started_at", "?")[:19].replace("T", " "),
+                    "image": e.get("image_name", "?"),
+                    "risk": (e.get("risk_level") or "?").upper(),
+                    "compliance": f"{cs:.0%}" if cs is not None else "—",
+                    "detections": e.get("detection_count", 0),
+                    "total_s": f"{e.get('total_time_s', 0):.1f}",
+                    "error": e.get("error") or "—",
+                })
+            ui.table(columns=columns, rows=rows, row_key="id").classes(
+                "w-full"
+            ).props("flat bordered dense")
+
     def _render_raw(result: AnalysisResult) -> None:
         raw_col.clear()
         with raw_col:
@@ -479,6 +692,9 @@ def index() -> None:
         err_label.set_text("")
         analyze_btn.disable()
         _reset_stages()
+
+        # Apply selected LLM backend
+        settings.llm_backend = backend_select.value
 
         # Persist image to the FireEye input store
         s.image_id = _uuid_mod.uuid4()
@@ -538,7 +754,9 @@ def index() -> None:
             _render_overview(result)
             _render_images(s.image_id)
             _render_detections(result)
+            _render_compliance(result)
             _render_assessment(result)
+            _render_audit_log()
             _render_raw(result)
             tabs.set_value(tab_overview)
             ui.notify("Analysis complete!", type="positive")
@@ -562,10 +780,11 @@ def index() -> None:
 
 # ── entry point ────────────────────────────────────────────────────────────────
 
-if not settings.openrouter_api_key:
+if not settings.openrouter_api_key and not settings.local_llm_url:
     raise RuntimeError(
-        "FIREEYE_OPENROUTER_API_KEY is not set. "
-        "Copy .env.example to .env and fill in your key."
+        "No LLM backend configured. Either set FIREEYE_OPENROUTER_API_KEY "
+        "or set FIREEYE_LOCAL_LLM_URL (e.g. http://localhost:11434). "
+        "See .env.example for details."
     )
 
 ui.run(

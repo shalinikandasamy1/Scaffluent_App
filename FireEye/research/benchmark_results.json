@@ -1,0 +1,13 @@
+[
+  {
+    "label": "Local",
+    "model": "qwen2.5vl:7b",
+    "total": 22,
+    "passed": 20,
+    "accuracy": 0.909,
+    "avg_time_s": 10.7,
+    "total_time_s": 235.32,
+    "total_prompt_tokens": 20736,
+    "total_completion_tokens": 1545
+  }
+]

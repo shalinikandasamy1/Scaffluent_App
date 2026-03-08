@@ -18,6 +18,7 @@ from app.models.schemas import (
     RiskClassification,
     RiskLevel,
 )
+from app.config import settings
 from app.pipeline.spatial import format_spatial_summary
 from app.services import openrouter_client
 from app.services.image_utils import encode_image_to_data_uri
@@ -120,7 +121,7 @@ def assess_present(
     messages = [
         {
             "role": "system",
-            "content": get_system_prompt("present_agent"),
+            "content": get_system_prompt("present_agent", settings.local_llm_model if settings.llm_backend == "local" else ""),
         },
         {
             "role": "user",
@@ -167,7 +168,7 @@ def predict_future(
     messages = [
         {
             "role": "system",
-            "content": get_system_prompt("future_agent"),
+            "content": get_system_prompt("future_agent", settings.local_llm_model if settings.llm_backend == "local" else ""),
         },
         {
             "role": "user",

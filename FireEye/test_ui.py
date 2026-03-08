@@ -32,8 +32,8 @@ SCREENSHOT_DIR = Path(__file__).parent / "qa_screenshots"
 TEST_IMAGE = next(
     (
         p for p in [
-            Path(__file__).parent / "test_data" / "safe" / "01_meeting_room.jpg",
-            Path(__file__).parent / "test_data" / "dangerous" / "01_campfire.jpg",
+            Path(__file__).parent / "test_data" / "dangerous" / "01_dfire.jpg",
+            Path(__file__).parent / "test_data" / "safe" / "01_extinguisher.jpg",
         ]
         if p.exists()
     ),
@@ -52,7 +52,7 @@ def _take(page, name: str) -> None:
 # ── main ───────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    venv_python = Path(__file__).parent / "venv" / "bin" / "python"
+    venv_python = Path(__file__).parent / ".venv" / "bin" / "python"
     ui_app      = Path(__file__).parent / "ui_app.py"
 
     print("▶ Starting FireEye dashboard …")
@@ -119,7 +119,7 @@ def main() -> None:
                     failures.append(f"Rengoku gradient not detected on header. class={header_class!r}")
 
             # ── 4. Five tabs visible ──────────────────────────────────────────
-            expected_tabs = ["Overview", "Images", "Detections", "Assessment", "Raw JSON"]
+            expected_tabs = ["Overview", "Images", "Detections", "Compliance", "Assessment", "Audit Log", "Raw JSON"]
             for tab in expected_tabs:
                 loc = page.get_by_role("tab", name=tab)
                 if loc.count() == 0:
@@ -167,6 +167,30 @@ def main() -> None:
                     failures.append("Analyze button still disabled after upload")
 
                 _take(page, "02_image_loaded.png")
+
+                # ── 9. Run full analysis ────────────────────────────────────
+                print("  Running full analysis (may take 30-60s with LLM) …")
+                analyze_btn.click()
+                try:
+                    # Wait for analysis complete notification (up to 120s for LLM)
+                    page.wait_for_selector(
+                        "text=Analysis complete", timeout=120_000
+                    )
+                    print("  ✔ Analysis completed successfully")
+
+                    # Screenshot each tab
+                    for tab_name in ["Overview", "Images", "Detections", "Compliance", "Assessment", "Audit Log", "Raw JSON"]:
+                        tab_loc = page.get_by_role("tab", name=tab_name)
+                        if tab_loc.count() > 0:
+                            tab_loc.click()
+                            page.wait_for_timeout(500)
+                            safe_name = tab_name.lower().replace(" ", "_")
+                            _take(page, f"03_{safe_name}.png")
+                            print(f"  ✔ tab '{tab_name}' rendered")
+
+                except Exception as e:
+                    print(f"  ⚠  Analysis did not complete: {e}")
+                    _take(page, "03_analysis_error.png")
             else:
                 print("  ⚠  No test image found, skipping upload test")
 
