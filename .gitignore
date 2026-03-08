@@ -54,3 +54,11 @@ FireEye/venv/
 venv/
 
 .env
+
+# YOLO base weights (downloaded, not trained)
+yolo*.pt
+
+# Training runs — keep best.pt, gitignore checkpoints and last.pt
+runs/**/weights/last.pt
+runs/**/weights/epoch*.pt
+FireEye/research/yolo_finetune/**/weights/last.pt

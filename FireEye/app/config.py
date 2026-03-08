@@ -17,7 +17,8 @@ class Settings(BaseSettings):
 
     # --- YOLO ---
     yolo_model_name: str = "yolo11n.pt"
-    yolo_confidence_threshold: float = 0.25
+    yolo_confidence_threshold: float = 0.20
+    yolo_device: str = "auto"  # "auto", "cpu", "cuda", "cuda:0", etc.
 
     # --- Risk classifier ---
     risk_confidence_threshold: float = 0.5

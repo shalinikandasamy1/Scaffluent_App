@@ -73,6 +73,14 @@ def run_test():
 
                 if result.present_assessment:
                     print(f"    Present summary : {result.present_assessment.summary[:120]}")
+                    score = result.present_assessment.compliance_score
+                    print(f"    Compliance score: {score:.0%} ({len(result.present_assessment.compliance_flags)} items)")
+                    if result.present_assessment.compliance_flags:
+                        for flag in result.present_assessment.compliance_flags:
+                            print(f"    Compliance      : [{flag.status:>7}] {flag.item} - {flag.note[:80]}")
+                    issues = result.present_assessment.compliance_issues
+                    if issues:
+                        print(f"    Issues          : {len(issues)} non-compliant item(s)")
                 if result.future_prediction:
                     n = len(result.future_prediction.scenarios)
                     print(f"    Future scenarios: {n}, overall={result.future_prediction.overall_risk.value}")

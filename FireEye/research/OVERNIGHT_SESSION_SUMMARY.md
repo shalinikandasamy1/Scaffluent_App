@@ -1,0 +1,90 @@
+# Overnight Session Summary (2026-03-08, 01:30–09:00 HKT)
+
+## What happened
+
+### Dataset & Model Training
+- **Dataset v3**: 6,112 images (5,195 train / 917 val) from D-Fire, PPE, synthetic, and weak-class augmentation
+- **NMS label cleanup**: Removed 2,078 duplicate bounding boxes (56-81% of weak class labels) — single biggest quality improvement
+- **Run 4**: mAP50=0.537, mAP50-95=0.332 (80 epochs, AdamW, imgsz=640, RTX 3060)
+- **Run 5 (best)**: mAP50=0.540, mAP50-95=0.340 (100 epochs, AdamW, imgsz=800, copy_paste=0.3, mixup=0.15)
+- **SGD comparison**: Tesla P4 SGD run got mAP50=0.422 — AdamW confirmed ~25% better
+- **Model deployed**: `models/fireeye_yolo11n_v5.pt` (5.2MB), configured in `.env`
+- **Run 5 per-class improvements**: tarpaulin +0.043, welding_sparks +0.028, smoke +0.018, hard_hat +0.015
+
+### Action Plan Implementation (10 of 14 phases)
+| Done | Phase | Description |
+|------|-------|-------------|
+| Y | 1.1 | HK regulatory rules injected into all LLM prompts |
+| Y | 1.2 | ComplianceFlag schema + compliance_flags field |
+| Y | 1.3 | Common accidents mapped to YOLO detection targets |
+| Y | 2.1 | Custom 12-class YOLO model trained (Run 5: mAP50=0.540) |
+| Y | 2.2 | Spatial reasoning (pairwise distances, scale estimation) |
+| Y | 3.1 | Risk levels aligned with HK regulatory framework |
+| Y | 3.2 | Compliance score (0-1) computed from flags |
+| Y | 5.1 | Heuristic fallback classifier with gas-near-fire=CRITICAL |
+| Y | 5.2 | Prompts externalized to `prompts/*.yaml` |
+| Y | 5.3 | Audit logging to `audit_logs/*.jsonl` |
+| N | 4.1 | Ground-truth test dataset (need more real images) |
+| Y | 4.2 | Evaluation metrics script (`evaluate.py`) |
+
+### Testing
+- **46 unit tests** passing (heuristic, spatial, compliance, prompt loader, audit, image_utils, API smoke)
+- **22 real test images** (12 dangerous, 10 safe) + 1 edge case — **100% heuristic accuracy**
+- Fire-on-extinguisher suppression: low-conf (<0.4) "fire" overlapping >50% with fire_extinguisher is filtered
+- `evaluate.py` with accuracy, false alarm rate, miss rate, timing, `--save` history tracking
+
+### Infrastructure
+- GPU power restored to 170W on .153
+- OpenRouter client: retry with exponential backoff, 120s timeout
+- FastAPI analysis endpoint: runs in thread pool (non-blocking)
+- YOLO auto-detects GPU
+
+## Key files changed/created
+
+```
+FireEye/
+├── app/
+│   ├── pipeline/
+│   │   ├── spatial.py          [NEW] Pairwise distances, scale estimation
+│   │   ├── risk_classifier.py  [MOD] HK rules, COMMON_ACCIDENTS, YAML prompts
+│   │   ├── llm_agents.py       [MOD] Regulatory checklist, YAML prompts
+│   │   └── orchestrator.py     [MOD] Audit logging integration
+│   ├── models/schemas.py       [MOD] ComplianceFlag, compliance_score, compliance_issues
+│   ├── services/
+│   │   ├── audit.py            [NEW] JSONL audit logging
+│   │   ├── prompt_loader.py    [NEW] YAML prompt loading
+│   │   └── openrouter_client.py [MOD] Retry + backoff + timeout
+│   ├── config.py               [MOD] yolo_device config
+│   └── routers/analysis.py     [MOD] asyncio.to_thread
+├── prompts/
+│   ├── risk_classifier.yaml    [NEW] Risk classifier prompts
+│   ├── present_agent.yaml      [NEW] Present agent prompts
+│   └── future_agent.yaml       [NEW] Future agent prompts
+├── tests/
+│   ├── test_heuristic.py       [NEW] 24 heuristic/spatial/compliance tests
+│   ├── test_services.py        [NEW] 10 prompt loader + audit tests
+│   ├── test_image_utils.py     [NEW] 6 image encoding + resize tests
+│   ├── test_api.py             [NEW] 4 API smoke tests
+│   └── conftest.py             [NEW] Shared fixtures
+├── evaluate.py                 [NEW] Evaluation metrics with --save history
+├── research/
+│   ├── train_run5.py           [NEW] Run 5 config (imgsz=800, copy_paste=0.3)
+│   ├── deploy_model.py           [NEW] Model deployment helper
+│   ├── post_training.sh          [NEW] Post-training comparison script
+│   └── DATASET_GENERATION_REPORT.md [MOD] Full overnight report
+├── models/fireeye_yolo11n_v5.pt [NEW] Best model weights (Run 5)
+└── .env                        [MOD] Fine-tuned model path + threshold
+```
+
+## Branch: `research/dataset-generation-overnight` (40+ commits)
+
+## What to do next
+
+1. **Merge to main** when ready: `git merge research/dataset-generation-overnight`
+2. **Update NiceGUI dashboard** (on `feature/fireeye-nicegui-dashboard`) to show:
+   - Compliance score gauge/badge
+   - Compliance flags table
+   - Audit log viewer
+3. **Run 5 complete**: Deployed as `fireeye_yolo11n_v5.pt`. Improved tarpaulin (+0.043), welding_sparks (+0.028), smoke (+0.018)
+4. **Collect more test images**: Real HK construction site photos for Phase 4.1
+5. **Test with LLM**: Run `python evaluate.py` (needs API key) to test full pipeline accuracy
