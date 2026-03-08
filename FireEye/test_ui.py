@@ -25,7 +25,7 @@ from playwright.sync_api import sync_playwright
 # ── config ─────────────────────────────────────────────────────────────────────
 APP_PORT     = 8090
 APP_URL      = f"http://localhost:{APP_PORT}"
-STARTUP_WAIT = 12         # seconds to let the app fully start
+STARTUP_WAIT = 20         # seconds to let the app fully start
 SCREENSHOT_DIR = Path(__file__).parent / "qa_screenshots"
 
 # Use the first safe test image available
@@ -172,9 +172,9 @@ def main() -> None:
                 print("  Running full analysis (may take 30-60s with LLM) …")
                 analyze_btn.click()
                 try:
-                    # Wait for analysis complete notification (up to 120s for LLM)
+                    # Wait for analysis complete notification (up to 300s for local LLM with cold start)
                     page.wait_for_selector(
-                        "text=Analysis complete", timeout=120_000
+                        "text=Analysis complete", timeout=300_000
                     )
                     print("  ✔ Analysis completed successfully")
 

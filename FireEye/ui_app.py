@@ -34,6 +34,7 @@ from app.config import settings
 from app.models.schemas import AnalysisResult
 from app.pipeline import llm_agents, risk_classifier, yolo_detector
 from app.pipeline.spatial import compute_distances, estimate_scale
+from app.services.audit import AuditRecord, write_audit
 from app.storage import image_store
 
 # ── Rengoku flame palette ──────────────────────────────────────────────────────
@@ -489,6 +490,43 @@ def index() -> None:
                 "w-full"
             ).props("flat bordered dense")
 
+            # Spatial proximity analysis
+            if len(dets) >= 2:
+                distances = compute_distances(dets)
+                scale = estimate_scale(dets)
+                concerns = [d for d in distances if d.get("safety_concern")]
+
+                ui.label("Spatial Proximity Analysis").classes(
+                    "text-base font-semibold mt-4"
+                )
+                if scale:
+                    ui.label(f"Estimated scale: {scale:.1f} px/m").classes(
+                        "text-xs text-grey-5"
+                    )
+
+                if concerns:
+                    ui.label(f"{len(concerns)} safety concern(s)").classes(
+                        "text-sm text-negative"
+                    )
+                    for c in concerns:
+                        with ui.card().classes("w-full proximity-concern"):
+                            with ui.row().classes("items-center gap-2"):
+                                ui.icon("warning", size="xs", color="red")
+                                ui.label(
+                                    f"{c['obj_a']} ↔ {c['obj_b']}"
+                                ).classes("text-sm font-semibold")
+                                if c.get("distance_m"):
+                                    ui.badge(
+                                        f"~{c['distance_m']:.1f}m",
+                                        color="negative",
+                                    )
+                            if c.get("concern"):
+                                ui.label(c["concern"]).classes("text-sm text-grey-7")
+                else:
+                    ui.label("No proximity safety concerns detected.").classes(
+                        "text-sm text-positive"
+                    )
+
     def _render_assessment(result: AnalysisResult) -> None:
         assess_col.clear()
         with assess_col:
@@ -701,52 +739,69 @@ def index() -> None:
         image_store.store_input_image(s.image_id, s.image_name, s.image_bytes)
         image_path = image_store.get_input_image_path(s.image_id)
 
+        audit = AuditRecord(s.image_id, s.image_name)
+        audit.llm_model = (
+            settings.local_llm_model if settings.llm_backend == "local"
+            else settings.llm_model
+        )
+
         try:
             result = AnalysisResult(image_id=s.image_id)
 
             # ── Stage 0: YOLO ──────────────────────────────────────────────────
             s.current_stage = 0
             _mark_stage(0, "running")
+            audit.start_stage("yolo")
             t0 = time.perf_counter()
             ann_path = image_store.get_annotated_path(s.image_id)
             detections = await asyncio.to_thread(
                 yolo_detector.detect_and_annotate, image_path, ann_path
             )
             s.stage_ms[0] = (time.perf_counter() - t0) * 1000
+            audit.end_stage()
             result.detections = detections
             result.annotated_image_path = str(ann_path)
+            audit.detection_count = len(detections)
             _mark_stage(0, "done", s.stage_ms[0])
 
             # ── Stage 1: Risk classifier ───────────────────────────────────────
             s.current_stage = 1
             _mark_stage(1, "running")
+            audit.start_stage("risk_classifier")
             t0 = time.perf_counter()
             risk = await asyncio.to_thread(
                 risk_classifier.classify_with_llm, str(image_path), detections
             )
             s.stage_ms[1] = (time.perf_counter() - t0) * 1000
+            audit.end_stage()
             result.risk_classification = risk
+            audit.risk_level = risk.risk_level.value
             _mark_stage(1, "done", s.stage_ms[1])
 
             # ── Stage 2: Present agent ─────────────────────────────────────────
             s.current_stage = 2
             _mark_stage(2, "running")
+            audit.start_stage("present_agent")
             t0 = time.perf_counter()
             present = await asyncio.to_thread(
                 llm_agents.assess_present, str(image_path), detections, risk
             )
             s.stage_ms[2] = (time.perf_counter() - t0) * 1000
+            audit.end_stage()
             result.present_assessment = present
+            audit.compliance_score = present.compliance_score
             _mark_stage(2, "done", s.stage_ms[2])
 
             # ── Stage 3: Future agent ──────────────────────────────────────────
             s.current_stage = 3
             _mark_stage(3, "running")
+            audit.start_stage("future_agent")
             t0 = time.perf_counter()
             future = await asyncio.to_thread(
                 llm_agents.predict_future, str(image_path), detections, risk, present
             )
             s.stage_ms[3] = (time.perf_counter() - t0) * 1000
+            audit.end_stage()
             result.future_prediction = future
             _mark_stage(3, "done", s.stage_ms[3])
 
@@ -763,6 +818,7 @@ def index() -> None:
 
         except Exception as exc:
             logger.exception("Pipeline failed at stage %d", s.current_stage)
+            audit.error = f"{type(exc).__name__}: {exc}"
             if s.current_stage >= 0:
                 _mark_stage(s.current_stage, "error")
             stage_name = STAGE_DEFS[s.current_stage][1] if s.current_stage >= 0 else "startup"
@@ -771,6 +827,7 @@ def index() -> None:
             ui.notify(msg, type="negative")
 
         finally:
+            write_audit(audit)
             s.current_stage = -1
             s.processing = False
             analyze_btn.enable()
