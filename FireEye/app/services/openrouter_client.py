@@ -99,6 +99,76 @@ def chat_completion(
     raise last_err
 
 
+def _schema_to_description(schema: dict) -> str:
+    """Convert a JSON schema to a human-readable field description.
+
+    Used to inject schema info into system prompts for local models
+    that don't support strict JSON schema enforcement at decode level.
+    """
+    s = schema.get("schema", schema)
+    lines = []
+    props = s.get("properties", {})
+    required = set(s.get("required", []))
+    for name, prop in props.items():
+        ptype = prop.get("type", "any")
+        req = " (required)" if name in required else ""
+        if "enum" in prop:
+            lines.append(f'  "{name}": one of {prop["enum"]}{req}')
+        elif ptype == "array":
+            items = prop.get("items", {})
+            if items.get("type") == "object":
+                sub_props = items.get("properties", {})
+                sub_fields = ", ".join(
+                    f'"{k}": {v.get("type", "any")}'
+                    + (f' (one of {v["enum"]})' if "enum" in v else "")
+                    for k, v in sub_props.items()
+                )
+                lines.append(f'  "{name}": array of objects with {{{sub_fields}}}{req}')
+            else:
+                lines.append(f'  "{name}": array of {items.get("type", "any")}{req}')
+        else:
+            lines.append(f'  "{name}": {ptype}{req}')
+    return "Expected JSON structure:\n{\n" + "\n".join(lines) + "\n}"
+
+
+def _validate_against_schema(data: dict, schema: dict) -> list[str]:
+    """Validate parsed JSON against schema, returning a list of error strings.
+
+    Lightweight validation — checks required fields, types, and enum values.
+    """
+    errors = []
+    s = schema.get("schema", schema)
+    required = set(s.get("required", []))
+    props = s.get("properties", {})
+
+    for field in required:
+        if field not in data:
+            errors.append(f"Missing required field: '{field}'")
+
+    for field, value in data.items():
+        if field not in props:
+            continue
+        prop = props[field]
+        expected_type = prop.get("type")
+
+        if expected_type == "string" and not isinstance(value, str):
+            errors.append(f"Field '{field}' should be string, got {type(value).__name__}")
+        elif expected_type == "number" and not isinstance(value, (int, float)):
+            errors.append(f"Field '{field}' should be number, got {type(value).__name__}")
+        elif expected_type == "array" and not isinstance(value, list):
+            errors.append(f"Field '{field}' should be array, got {type(value).__name__}")
+
+        if "enum" in prop and value not in prop["enum"]:
+            errors.append(f"Field '{field}' value '{value}' not in {prop['enum']}")
+
+        # Validate confidence range (semantic check)
+        if field == "confidence" and isinstance(value, (int, float)):
+            if not 0 <= value <= 1:
+                errors.append(f"Field 'confidence' should be 0-1, got {value}")
+
+    return errors
+
+
 def chat_completion_json(
     messages: list[dict[str, Any]],
     *,
@@ -107,23 +177,67 @@ def chat_completion_json(
     temperature: float | None = None,
     max_retries: int = 2,
 ) -> dict:
-    """Send a chat completion with enforced JSON schema and parse the result."""
-    response_format = {
-        "type": "json_schema",
-        "json_schema": json_schema,
-    }
+    """Send a chat completion with enforced JSON schema and parse the result.
+
+    For local models, injects schema description into the system prompt
+    and validates the response with retry + error feedback for self-correction.
+    """
+    is_local = settings.llm_backend == "local"
+
+    # For local models, inject schema description into system prompt
+    working_messages = list(messages)
+    if is_local and working_messages and working_messages[0].get("role") == "system":
+        schema_desc = _schema_to_description(json_schema)
+        working_messages = [dict(m) for m in working_messages]
+        working_messages[0] = {
+            **working_messages[0],
+            "content": working_messages[0]["content"] + "\n\n" + schema_desc,
+        }
+
+    response_format: dict[str, Any]
+    if is_local:
+        # Ollama uses simpler format: json mode without strict schema
+        response_format = {"type": "json_object"}
+    else:
+        response_format = {"type": "json_schema", "json_schema": json_schema}
+
     last_err: Exception | None = None
     for attempt in range(1, max_retries + 1):
         raw = chat_completion(
-            messages,
+            working_messages,
             model=model,
             temperature=temperature,
             response_format=response_format,
-            max_retries=1,  # API retries handled in chat_completion
+            max_retries=1,
         )
         try:
-            return json.loads(raw)
+            data = json.loads(raw)
         except json.JSONDecodeError as e:
             last_err = e
             logger.warning("JSON parse failed (attempt %d/%d): %s", attempt, max_retries, e)
+            if attempt < max_retries:
+                # Inject error feedback for retry
+                working_messages = list(working_messages) + [
+                    {"role": "assistant", "content": raw},
+                    {"role": "user", "content": f"Your response was not valid JSON: {e}. Please respond with ONLY a valid JSON object."},
+                ]
+            continue
+
+        # Validate against schema
+        validation_errors = _validate_against_schema(data, json_schema)
+        if not validation_errors:
+            return data
+
+        logger.warning("Schema validation errors (attempt %d/%d): %s", attempt, max_retries, validation_errors)
+        last_err = ValueError(f"Schema validation failed: {validation_errors}")
+        if attempt < max_retries:
+            working_messages = list(working_messages) + [
+                {"role": "assistant", "content": raw},
+                {"role": "user", "content": f"Your JSON has errors: {'; '.join(validation_errors)}. Please fix and respond with corrected JSON only."},
+            ]
+
+    # If validation failed but we have data, return it with a warning
+    if isinstance(last_err, ValueError) and 'data' in locals():
+        logger.warning("Returning LLM response despite validation errors: %s", last_err)
+        return data
     raise last_err

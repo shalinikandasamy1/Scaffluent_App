@@ -82,6 +82,9 @@ def get_system_prompt(name: str, model_name: str = "") -> str:
         json_inst = adapter.get("json_instruction", "").strip()
         if json_inst:
             base = base + "\n\n" + json_inst
+        reasoning = adapter.get("reasoning_hint", "").strip()
+        if reasoning:
+            base = base + "\n\n" + reasoning
     return base
 
 
