@@ -65,7 +65,7 @@ def compute_distances(detections: list[Detection]) -> list[dict]:
     return results
 
 
-def estimate_scale(detections: list[Detection], image_height: int = 640) -> float | None:
+def estimate_scale(detections: list[Detection]) -> float | None:
     """Estimate a rough px-to-metre ratio using reference objects.
 
     Returns pixels per metre, or None if no reference objects found.
@@ -107,7 +107,7 @@ def format_spatial_summary(
         return "No objects detected."
 
     distances = compute_distances(detections)
-    scale = estimate_scale(detections, image_height)
+    scale = estimate_scale(detections)
 
     lines = []
 

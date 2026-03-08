@@ -11,7 +11,7 @@ import logging
 import time
 from typing import Any
 
-from openai import OpenAI
+from openai import APIStatusError, APITimeoutError, OpenAI, RateLimitError
 
 from app.config import settings
 
@@ -85,17 +85,29 @@ def chat_completion(
             content = completion.choices[0].message.content
             logger.debug("LLM response: %s", content[:200])
             return content
-        except Exception as e:
+        except RateLimitError as e:
             last_err = e
-            err_str = str(e).lower()
-            # Retry on rate limits and server errors
-            if any(kw in err_str for kw in ("rate", "429", "500", "502", "503", "timeout")):
+            wait = 2 ** attempt
+            logger.warning("Rate limit (attempt %d/%d), retrying in %ds: %s",
+                           attempt, max_retries, wait, e)
+            time.sleep(wait)
+        except APITimeoutError as e:
+            last_err = e
+            wait = 2 ** attempt
+            logger.warning("Timeout (attempt %d/%d), retrying in %ds: %s",
+                           attempt, max_retries, wait, e)
+            time.sleep(wait)
+        except APIStatusError as e:
+            last_err = e
+            if e.status_code in (500, 502, 503):
                 wait = 2 ** attempt
-                logger.warning("API error (attempt %d/%d), retrying in %ds: %s",
-                               attempt, max_retries, wait, e)
+                logger.warning("Server error %d (attempt %d/%d), retrying in %ds: %s",
+                               e.status_code, attempt, max_retries, wait, e)
                 time.sleep(wait)
             else:
-                raise  # Non-transient error, don't retry
+                raise  # Non-transient status error, don't retry
+        except Exception:
+            raise  # Non-API error, don't retry
     raise last_err
 
 
