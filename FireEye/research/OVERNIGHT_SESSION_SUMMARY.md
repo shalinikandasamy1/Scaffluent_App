@@ -5,9 +5,11 @@
 ### Dataset & Model Training
 - **Dataset v3**: 6,112 images (5,195 train / 917 val) from D-Fire, PPE, synthetic, and weak-class augmentation
 - **NMS label cleanup**: Removed 2,078 duplicate bounding boxes (56-81% of weak class labels) — single biggest quality improvement
-- **Run 4 (best)**: mAP50=0.536, mAP50-95=0.332 (80 epochs, AdamW, RTX 3060)
+- **Run 4**: mAP50=0.537, mAP50-95=0.332 (80 epochs, AdamW, imgsz=640, RTX 3060)
+- **Run 5 (best)**: mAP50=0.540, mAP50-95=0.340 (100 epochs, AdamW, imgsz=800, copy_paste=0.3, mixup=0.15)
 - **SGD comparison**: Tesla P4 SGD run got mAP50=0.422 — AdamW confirmed ~25% better
-- **Model deployed**: `models/fireeye_yolo11n_v4.pt` (5.5MB), configured in `.env`
+- **Model deployed**: `models/fireeye_yolo11n_v5.pt` (5.2MB), configured in `.env`
+- **Run 5 per-class improvements**: tarpaulin +0.043, welding_sparks +0.028, smoke +0.018, hard_hat +0.015
 
 ### Action Plan Implementation (10 of 14 phases)
 | Done | Phase | Description |
@@ -15,7 +17,7 @@
 | Y | 1.1 | HK regulatory rules injected into all LLM prompts |
 | Y | 1.2 | ComplianceFlag schema + compliance_flags field |
 | Y | 1.3 | Common accidents mapped to YOLO detection targets |
-| Y | 2.1 | Custom 12-class YOLO model trained |
+| Y | 2.1 | Custom 12-class YOLO model trained (Run 5: mAP50=0.540) |
 | Y | 2.2 | Spatial reasoning (pairwise distances, scale estimation) |
 | Y | 3.1 | Risk levels aligned with HK regulatory framework |
 | Y | 3.2 | Compliance score (0-1) computed from flags |
@@ -70,7 +72,7 @@ FireEye/
 │   ├── deploy_model.py           [NEW] Model deployment helper
 │   ├── post_training.sh          [NEW] Post-training comparison script
 │   └── DATASET_GENERATION_REPORT.md [MOD] Full overnight report
-├── models/fireeye_yolo11n_v4.pt [NEW] Best model weights
+├── models/fireeye_yolo11n_v5.pt [NEW] Best model weights (Run 5)
 └── .env                        [MOD] Fine-tuned model path + threshold
 ```
 
@@ -83,6 +85,6 @@ FireEye/
    - Compliance score gauge/badge
    - Compliance flags table
    - Audit log viewer
-3. **Run 5 training**: In progress — imgsz=800, copy_paste=0.3, mixup=0.15. Compare with `python research/compare_per_class.py run4 run5`
+3. **Run 5 complete**: Deployed as `fireeye_yolo11n_v5.pt`. Improved tarpaulin (+0.043), welding_sparks (+0.028), smoke (+0.018)
 4. **Collect more test images**: Real HK construction site photos for Phase 4.1
 5. **Test with LLM**: Run `python evaluate.py` (needs API key) to test full pipeline accuracy
