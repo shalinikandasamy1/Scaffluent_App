@@ -101,6 +101,120 @@ class TestAuditRecord:
         assert last["risk_level"] == "safe"
 
 
+class TestModelAdapters:
+    def test_default_adapter_no_model(self):
+        from app.services.prompt_loader import get_system_prompt
+        prompt = get_system_prompt("risk_classifier")
+        assert "fire safety" in prompt.lower()
+        # No model name = no adapter appended
+        assert "MUST respond with ONLY" not in prompt
+
+    def test_adapter_for_qwen(self):
+        from app.services.prompt_loader import get_system_prompt
+        prompt = get_system_prompt("risk_classifier", "qwen2.5vl:7b")
+        assert "fire safety" in prompt.lower()
+        # Should have adapter JSON instruction appended
+        assert "JSON" in prompt
+
+    def test_adapter_for_unknown_model_uses_default(self):
+        from app.services.prompt_loader import get_system_prompt
+        prompt = get_system_prompt("risk_classifier", "some-unknown-model")
+        assert "fire safety" in prompt.lower()
+        # Default adapter has a JSON instruction
+        assert "JSON" in prompt
+
+    def test_adapter_prefix_match(self):
+        from app.services.prompt_loader import get_system_prompt
+        # "gemma3:12b" should match "gemma3" adapter prefix
+        prompt = get_system_prompt("risk_classifier", "gemma3:12b")
+        assert "single JSON object" in prompt
+
+
+class TestSchemaValidation:
+    def test_valid_risk_response(self):
+        from app.services.openrouter_client import _validate_against_schema
+        schema = {
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "risk_level": {"type": "string", "enum": ["safe", "low", "medium", "high", "critical"]},
+                    "confidence": {"type": "number"},
+                    "reason": {"type": "string"},
+                },
+                "required": ["risk_level", "confidence", "reason"],
+            }
+        }
+        data = {"risk_level": "high", "confidence": 0.85, "reason": "Fire detected"}
+        assert _validate_against_schema(data, schema) == []
+
+    def test_missing_required_field(self):
+        from app.services.openrouter_client import _validate_against_schema
+        schema = {
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "risk_level": {"type": "string"},
+                    "confidence": {"type": "number"},
+                },
+                "required": ["risk_level", "confidence"],
+            }
+        }
+        errors = _validate_against_schema({"risk_level": "safe"}, schema)
+        assert any("confidence" in e for e in errors)
+
+    def test_invalid_enum_value(self):
+        from app.services.openrouter_client import _validate_against_schema
+        schema = {
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "risk_level": {"type": "string", "enum": ["safe", "low", "medium"]},
+                },
+                "required": ["risk_level"],
+            }
+        }
+        errors = _validate_against_schema({"risk_level": "extreme"}, schema)
+        assert any("enum" in e or "not in" in e for e in errors)
+
+    def test_confidence_range_check(self):
+        from app.services.openrouter_client import _validate_against_schema
+        schema = {
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "confidence": {"type": "number"},
+                },
+                "required": ["confidence"],
+            }
+        }
+        errors = _validate_against_schema({"confidence": 1.5}, schema)
+        assert any("confidence" in e for e in errors)
+
+    def test_schema_to_description(self):
+        from app.services.openrouter_client import _schema_to_description
+        schema = {
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "risk_level": {"type": "string", "enum": ["safe", "high"]},
+                    "confidence": {"type": "number"},
+                    "hazards": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["risk_level", "confidence"],
+            }
+        }
+        desc = _schema_to_description(schema)
+        assert "risk_level" in desc
+        assert "safe" in desc
+        assert "confidence" in desc
+        assert "(required)" in desc
+
+    def test_adapter_reasoning_hint_for_qwen(self):
+        from app.services.prompt_loader import get_system_prompt
+        prompt = get_system_prompt("risk_classifier", "qwen2.5vl:7b")
+        assert "step" in prompt.lower() or "consider" in prompt.lower()
+
+
 class TestCommonAccidents:
     def test_common_accidents_structure(self):
         from app.pipeline.risk_classifier import COMMON_ACCIDENTS

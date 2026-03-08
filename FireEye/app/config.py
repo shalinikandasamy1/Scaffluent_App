@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     llm_model: str = "google/gemini-3-flash-preview"
     llm_temperature: float = 0.0
 
+    # --- Local LLM (Ollama) ---
+    local_llm_url: str = ""  # e.g. "http://localhost:11434" — set to enable local LLM
+    local_llm_model: str = ""  # e.g. "qwen2.5vl:7b"
+    llm_backend: str = "openrouter"  # "openrouter" or "local"
+
     # --- YOLO ---
     yolo_model_name: str = "yolo11n.pt"
     yolo_confidence_threshold: float = 0.20

@@ -135,9 +135,17 @@ def evaluate(heuristic_only: bool = False, output_json: bool = False):
     avg_timing = {k: round(sum(v) / len(v), 3) if v else 0
                   for k, v in timing.items()}
 
+    if heuristic_only:
+        llm_label = "heuristic"
+    elif settings.llm_backend == "local":
+        llm_label = f"local/{settings.local_llm_model or 'unknown'}"
+    else:
+        llm_label = settings.llm_model
+
     metrics = {
         "model": settings.yolo_model_name,
-        "llm": settings.llm_model if not heuristic_only else "heuristic",
+        "llm": llm_label,
+        "llm_backend": settings.llm_backend if not heuristic_only else "none",
         "total_images": total,
         "accuracy": round(accuracy, 3),
         "false_alarm_rate": round(false_alarm_rate, 3),
@@ -155,7 +163,7 @@ def evaluate(heuristic_only: bool = False, output_json: bool = False):
         print("FireEye Evaluation Report")
         print("=" * 60)
         print(f"  YOLO model  : {metrics['model']}")
-        print(f"  Classifier  : {metrics['llm']}")
+        print(f"  Classifier  : {metrics['llm']} ({metrics['llm_backend']})")
         print(f"  Images      : {total}")
         print(f"  Accuracy    : {accuracy:.1%}")
         print(f"  False alarm : {false_alarm_rate:.1%} (safe→high/critical)")

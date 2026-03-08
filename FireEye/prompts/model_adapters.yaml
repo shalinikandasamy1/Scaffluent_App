@@ -1,0 +1,53 @@
+# Model-Specific Prompt Adapters
+# These are appended to the master system prompts to handle
+# cross-model output format differences.
+#
+# The master prompts (risk_classifier.yaml, present_agent.yaml, etc.)
+# contain the domain knowledge and are model-agnostic.
+# These adapters handle output formatting quirks per model family.
+#
+# Fields:
+#   json_instruction  — appended to system prompt for JSON output guidance
+#   reasoning_hint    — appended to system prompt for smaller models that
+#                       need explicit step-by-step reasoning guidance
+#   temperature       — override temperature for this model (optional)
+
+# Default adapter (works for most cloud models: Gemini, GPT-4, Claude)
+default:
+  json_instruction: |
+    Respond with valid JSON only. No markdown fences, no explanation outside the JSON.
+  reasoning_hint: ""
+
+# Qwen2.5-VL family (local via Ollama)
+qwen2.5vl:
+  json_instruction: |
+    You MUST respond with ONLY a valid JSON object. Do NOT wrap it in markdown code fences.
+    Do NOT include any text before or after the JSON. The response must start with { and end with }.
+  reasoning_hint: |
+    Before deciding, consider each detection carefully:
+    1. What objects are visible and what do they indicate?
+    2. Are any hazardous items near ignition sources or flammable materials?
+    3. What safety equipment is present or missing?
+    Then provide your assessment based on this analysis.
+  temperature: 0.1
+
+# Gemma 3 family (local via Ollama)
+gemma3:
+  json_instruction: |
+    Output a single JSON object. No markdown formatting, no preamble, no postamble.
+    Start your response with { and end with }.
+  reasoning_hint: |
+    Analyze step by step:
+    1. Identify all visible objects and their spatial relationships.
+    2. Assess fire risk based on proximity of ignition sources to flammable materials.
+    3. Note presence or absence of required safety equipment.
+  temperature: 0.1
+
+# Generic Ollama models
+ollama_generic:
+  json_instruction: |
+    IMPORTANT: Respond with ONLY valid JSON. No markdown code blocks, no extra text.
+    Your entire response must be a single valid JSON object starting with { and ending with }.
+  reasoning_hint: |
+    Think step by step about what you see in the image before responding.
+  temperature: 0.1

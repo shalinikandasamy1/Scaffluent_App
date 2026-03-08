@@ -1,0 +1,45 @@
+# FireEye Dashboard — Docker Compose with GPU support
+#
+# Deploy on Tesla P4 (.172):
+#   scp -r FireEye/ evnchn@192.168.50.172:~/FireEye/
+#   ssh evnchn@192.168.50.172 "cd ~/FireEye && docker compose up -d --build"
+#
+# Or build and run locally:
+#   cd FireEye && docker compose up -d --build
+
+services:
+  fireeye:
+    build: .
+    container_name: fireeye-dashboard
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    env_file:
+      - .env
+    environment:
+      # Auth: set to true to require login
+      - FIREEYE_AUTH_ENABLED=true
+      # Users: comma-separated "user:pass" pairs
+      # Edit this line to add/remove users. Easy for AI agents to modify.
+      - FIREEYE_USERS=admin:fireeye,demo:demo123,inspector:inspect2026
+      # Session secret (change for production)
+      - FIREEYE_STORAGE_SECRET=fireeye-prod-secret-change-me
+      # Use OpenRouter by default (cloud inference)
+      - FIREEYE_LLM_BACKEND=openrouter
+    volumes:
+      # Persist audit logs and images across container restarts
+      - fireeye-audit:/app/audit_logs
+      - fireeye-images:/app/images
+      # Mount users.json for file-based user management (alternative to env var)
+      # - ./users.json:/app/users.json:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  fireeye-audit:
+  fireeye-images:

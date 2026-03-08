@@ -34,8 +34,7 @@ def analyze_image(image_id: UUID) -> AnalysisResult:
         # ------------------------------------------------------------------
         logger.info("[Stage 1] Running YOLO on %s", image_path.name)
         audit.start_stage("yolo_detection")
-        output_dir = image_store._output_dir()
-        annotated_path = output_dir / f"{image_id}_annotated.jpg"
+        annotated_path = image_store.get_annotated_path(image_id)
         detections = yolo_detector.detect_and_annotate(image_path, annotated_path)
         audit.end_stage()
         audit.detection_count = len(detections)

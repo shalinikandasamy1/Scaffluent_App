@@ -9,19 +9,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.models.schemas import BoundingBox, Detection, RiskLevel
+from app.models.schemas import RiskLevel
 from app.pipeline.risk_classifier import classify_from_detections
 from app.pipeline.spatial import compute_distances, estimate_scale, format_spatial_summary
 
 
-def _det(label: str, conf: float = 0.8,
-         x1: float = 0, y1: float = 0,
-         x2: float = 100, y2: float = 100) -> Detection:
-    """Helper to create a Detection."""
-    return Detection(
-        label=label, confidence=conf,
-        bbox=BoundingBox(x1=x1, y1=y1, x2=x2, y2=y2),
-    )
+# Use shared make_detection fixture from conftest.py
 
 
 # =====================================================================
@@ -33,85 +26,85 @@ class TestHeuristicClassifier:
         result = classify_from_detections([])
         assert result.risk_level == RiskLevel.safe
 
-    def test_only_safety_equipment_is_safe(self):
+    def test_only_safety_equipment_is_safe(self, make_detection):
         detections = [
-            _det("fire_extinguisher"),
-            _det("hard_hat"),
-            _det("safety_vest"),
+            make_detection("fire_extinguisher"),
+            make_detection("hard_hat"),
+            make_detection("safety_vest"),
         ]
         result = classify_from_detections(detections)
         assert result.risk_level == RiskLevel.safe
 
-    def test_fire_without_safety_is_high(self):
-        detections = [_det("fire")]
+    def test_fire_without_safety_is_high(self, make_detection):
+        detections = [make_detection("fire")]
         result = classify_from_detections(detections)
         assert result.risk_level == RiskLevel.high
 
-    def test_fire_with_safety_is_medium(self):
+    def test_fire_with_safety_is_medium(self, make_detection):
         detections = [
-            _det("fire"),
-            _det("fire_extinguisher"),
+            make_detection("fire"),
+            make_detection("fire_extinguisher"),
         ]
         result = classify_from_detections(detections)
         assert result.risk_level == RiskLevel.medium
 
-    def test_ignition_near_flammable_without_extinguisher_is_high(self):
+    def test_ignition_near_flammable_without_extinguisher_is_high(self, make_detection):
         detections = [
-            _det("welding_sparks", x1=0, y1=0, x2=50, y2=50),
-            _det("scaffold_net", x1=60, y1=0, x2=200, y2=200),
+            make_detection("welding_sparks", x1=0, y1=0, x2=50, y2=50),
+            make_detection("scaffold_net", x1=60, y1=0, x2=200, y2=200),
         ]
         result = classify_from_detections(detections)
         assert result.risk_level == RiskLevel.high
 
-    def test_ignition_near_flammable_with_extinguisher_is_medium(self):
+    def test_ignition_near_flammable_with_extinguisher_is_medium(self, make_detection):
         detections = [
-            _det("welding_sparks"),
-            _det("tarpaulin"),
-            _det("fire_extinguisher"),
+            make_detection("welding_sparks"),
+            make_detection("tarpaulin"),
+            make_detection("fire_extinguisher"),
         ]
         result = classify_from_detections(detections)
         assert result.risk_level == RiskLevel.medium
 
-    def test_gas_cylinder_near_ignition_is_critical(self):
+    def test_gas_cylinder_near_ignition_is_critical(self, make_detection):
         # Place gas cylinder close to fire
         detections = [
-            _det("fire", x1=100, y1=100, x2=200, y2=200),
-            _det("gas_cylinder", x1=150, y1=150, x2=250, y2=300),
+            make_detection("fire", x1=100, y1=100, x2=200, y2=200),
+            make_detection("gas_cylinder", x1=150, y1=150, x2=250, y2=300),
         ]
         result = classify_from_detections(detections)
         assert result.risk_level == RiskLevel.critical
 
-    def test_flammable_without_ignition_is_low(self):
-        detections = [_det("scaffold_net")]
+    def test_flammable_without_ignition_is_low(self, make_detection):
+        detections = [make_detection("scaffold_net")]
         result = classify_from_detections(detections)
         assert result.risk_level == RiskLevel.low
 
-    def test_smoke_only_is_medium(self):
-        detections = [_det("smoke")]
+    def test_smoke_only_is_medium(self, make_detection):
+        detections = [make_detection("smoke")]
         result = classify_from_detections(detections)
         assert result.risk_level == RiskLevel.medium
 
-    def test_person_only_is_safe(self):
-        detections = [_det("person")]
+    def test_person_only_is_safe(self, make_detection):
+        detections = [make_detection("person")]
         result = classify_from_detections(detections)
         assert result.risk_level == RiskLevel.safe
 
-    def test_low_conf_fire_on_extinguisher_suppressed(self):
+    def test_low_conf_fire_on_extinguisher_suppressed(self, make_detection):
         """Low-confidence 'fire' overlapping a fire_extinguisher should be suppressed."""
         detections = [
-            _det("fire_extinguisher", conf=0.8, x1=250, y1=400, x2=500, y2=640),
-            _det("fire", conf=0.2, x1=257, y1=444, x2=312, y2=512),  # overlaps extinguisher
-            _det("safety_vest", conf=0.8),
-            _det("person", conf=0.8),
+            make_detection("fire_extinguisher", conf=0.8, x1=250, y1=400, x2=500, y2=640),
+            make_detection("fire", conf=0.2, x1=257, y1=444, x2=312, y2=512),  # overlaps extinguisher
+            make_detection("safety_vest", conf=0.8),
+            make_detection("person", conf=0.8),
         ]
         result = classify_from_detections(detections)
         assert result.risk_level == RiskLevel.safe
 
-    def test_high_conf_fire_not_suppressed(self):
+    def test_high_conf_fire_not_suppressed(self, make_detection):
         """High-confidence fire near extinguisher should NOT be suppressed."""
         detections = [
-            _det("fire_extinguisher", conf=0.8, x1=250, y1=400, x2=500, y2=640),
-            _det("fire", conf=0.7, x1=257, y1=444, x2=312, y2=512),
+            make_detection("fire_extinguisher", conf=0.8, x1=250, y1=400, x2=500, y2=640),
+            make_detection("fire", conf=0.7, x1=257, y1=444, x2=312, y2=512),
         ]
         result = classify_from_detections(detections)
         assert result.risk_level == RiskLevel.medium  # fire + safety = medium
@@ -125,48 +118,48 @@ class TestSpatialReasoning:
     def test_compute_distances_empty(self):
         assert compute_distances([]) == []
 
-    def test_compute_distances_single(self):
-        assert compute_distances([_det("fire")]) == []
+    def test_compute_distances_single(self, make_detection):
+        assert compute_distances([make_detection("fire")]) == []
 
-    def test_compute_distances_pair(self):
-        d1 = _det("fire", x1=0, y1=0, x2=100, y2=100)  # center: 50,50
-        d2 = _det("person", x1=200, y1=200, x2=300, y2=300)  # center: 250,250
+    def test_compute_distances_pair(self, make_detection):
+        d1 = make_detection("fire", x1=0, y1=0, x2=100, y2=100)  # center: 50,50
+        d2 = make_detection("person", x1=200, y1=200, x2=300, y2=300)  # center: 250,250
         distances = compute_distances([d1, d2])
         assert len(distances) == 1
         assert distances[0]["safety_concern"] is True  # fire <-> person
         expected_dist = ((250 - 50) ** 2 + (250 - 50) ** 2) ** 0.5
         assert abs(distances[0]["distance_px"] - expected_dist) < 1.0
 
-    def test_safety_concern_flagging(self):
-        d1 = _det("welding_sparks")
-        d2 = _det("gas_cylinder")
+    def test_safety_concern_flagging(self, make_detection):
+        d1 = make_detection("welding_sparks")
+        d2 = make_detection("gas_cylinder")
         distances = compute_distances([d1, d2])
         assert distances[0]["safety_concern"] is True
 
-    def test_no_safety_concern(self):
-        d1 = _det("hard_hat")
-        d2 = _det("safety_vest")
+    def test_no_safety_concern(self, make_detection):
+        d1 = make_detection("hard_hat")
+        d2 = make_detection("safety_vest")
         distances = compute_distances([d1, d2])
         assert distances[0]["safety_concern"] is False
 
-    def test_estimate_scale_with_person(self):
+    def test_estimate_scale_with_person(self, make_detection):
         # Person detection with height of 170 pixels → ~1.7m → 100 px/m
-        person = _det("person", x1=100, y1=100, x2=200, y2=270)
+        person = make_detection("person", x1=100, y1=100, x2=200, y2=270)
         scale = estimate_scale([person])
         assert scale is not None
         assert abs(scale - 100.0) < 1.0  # 170px / 1.7m = 100 px/m
 
-    def test_estimate_scale_no_reference(self):
-        fire = _det("fire")
+    def test_estimate_scale_no_reference(self, make_detection):
+        fire = make_detection("fire")
         assert estimate_scale([fire]) is None
 
     def test_format_spatial_summary_empty(self):
         assert format_spatial_summary([]) == "No objects detected."
 
-    def test_format_spatial_summary_with_concerns(self):
+    def test_format_spatial_summary_with_concerns(self, make_detection):
         detections = [
-            _det("fire", x1=0, y1=0, x2=100, y2=100),
-            _det("scaffold_net", x1=50, y1=50, x2=200, y2=200),
+            make_detection("fire", x1=0, y1=0, x2=100, y2=100),
+            make_detection("scaffold_net", x1=50, y1=50, x2=200, y2=200),
         ]
         summary = format_spatial_summary(detections)
         assert "PROXIMITY CONCERNS" in summary
