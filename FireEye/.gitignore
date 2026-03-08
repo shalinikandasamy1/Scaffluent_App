@@ -33,3 +33,7 @@ research/inpainted_*/
 research/severity_*/
 research/eval_run*/
 research/sgd_run*/
+research/welding_frames/
+research/welding_labels/
+research/yolo_finetune/
+research/run5_monitor.log
