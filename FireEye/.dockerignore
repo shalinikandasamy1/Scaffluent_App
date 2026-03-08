@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+runs/
+research/
+qa_screenshots/
+eval_history.jsonl
+*.zip
+.env

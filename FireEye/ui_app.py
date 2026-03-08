@@ -28,7 +28,11 @@ from dotenv import load_dotenv
 _env_file = Path(__file__).parent / ".env"
 load_dotenv(_env_file, override=False)   # override=False: real env vars win
 
-from nicegui import events, ui
+from fastapi import Request
+from fastapi.responses import RedirectResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+
+from nicegui import app, events, ui
 
 from app.config import settings
 from app.models.schemas import AnalysisResult
@@ -127,6 +131,81 @@ LIKELIHOOD_COLOR: dict[str, str] = {
     "certain":  "red",
 }
 
+# ── authentication ─────────────────────────────────────────────────────────────
+# Barebones user management via FIREEYE_USERS env var or users.json file.
+# Format (env): "user1:pass1,user2:pass2"
+# Format (json): {"user1": "pass1", "user2": "pass2"}
+# For production, passwords should be hashed — this is demo-grade auth.
+
+import os as _os
+
+_USERS_FILE = Path(__file__).parent / "users.json"
+
+
+def _load_users() -> dict[str, str]:
+    """Load users from FIREEYE_USERS env var or users.json file."""
+    env = _os.environ.get("FIREEYE_USERS", "")
+    if env:
+        users = {}
+        for pair in env.split(","):
+            pair = pair.strip()
+            if ":" in pair:
+                u, p = pair.split(":", 1)
+                users[u.strip()] = p.strip()
+        return users
+    if _USERS_FILE.exists():
+        return json.loads(_USERS_FILE.read_text())
+    # Default demo user if no config exists
+    return {"admin": "fireeye"}
+
+
+# Auth is optional — set FIREEYE_AUTH_ENABLED=true to require login
+_AUTH_ENABLED = _os.environ.get("FIREEYE_AUTH_ENABLED", "false").lower() in ("true", "1", "yes")
+
+if _AUTH_ENABLED:
+    unrestricted_page_routes = {"/login"}
+
+    @app.add_middleware
+    class AuthMiddleware(BaseHTTPMiddleware):
+        """Restrict access to all NiceGUI pages; redirect to /login if unauthenticated."""
+
+        async def dispatch(self, request: Request, call_next):
+            if not app.storage.user.get("authenticated", False):
+                if (
+                    not request.url.path.startswith("/_nicegui")
+                    and request.url.path not in unrestricted_page_routes
+                ):
+                    return RedirectResponse(f"/login?redirect_to={request.url.path}")
+            return await call_next(request)
+
+    @ui.page("/login")
+    def login_page(redirect_to: str = "/") -> RedirectResponse | None:
+        if app.storage.user.get("authenticated", False):
+            return RedirectResponse("/")
+
+        ui.add_head_html(RENGOKU_CSS)
+
+        def try_login() -> None:
+            users = _load_users()
+            if users.get(username.value) == password.value:
+                app.storage.user.update({"username": username.value, "authenticated": True})
+                ui.navigate.to(redirect_to)
+            else:
+                ui.notify("Wrong username or password", color="negative")
+
+        with ui.column().classes("absolute-center items-center gap-4"):
+            with ui.row().classes("items-center gap-2"):
+                ui.icon("local_fire_department", size="lg").style("color: var(--rengoku-orange)")
+                ui.label("FireEye").classes("text-3xl font-bold")
+            with ui.card().classes("w-80"):
+                username = ui.input("Username").classes("w-full").on("keydown.enter", try_login)
+                password = ui.input(
+                    "Password", password=True, password_toggle_button=True
+                ).classes("w-full").on("keydown.enter", try_login)
+                ui.button("Log in", on_click=try_login, icon="login").classes("w-full mt-2")
+        return None
+
+
 # ── helpers ────────────────────────────────────────────────────────────────────
 
 def _path_to_b64(path: str | Path) -> str:
@@ -177,6 +256,13 @@ def index() -> None:
         ui.space()
         dark = ui.dark_mode()
         ui.switch("Dark mode").bind_value(dark, "value").props("color=white")
+        if _AUTH_ENABLED:
+            def _logout():
+                app.storage.user.clear()
+                ui.navigate.to("/login")
+            ui.button(icon="logout", on_click=_logout).props(
+                "flat round color=white"
+            ).tooltip("Log out")
 
     # ── body: splitter layout ─────────────────────────────────────────────────
     with ui.splitter(value=26).classes("w-full") as splitter:
@@ -844,10 +930,13 @@ if not settings.openrouter_api_key and not settings.local_llm_url:
         "See .env.example for details."
     )
 
+_storage_secret = _os.environ.get("FIREEYE_STORAGE_SECRET", "fireeye-dev-secret-change-me")
+
 ui.run(
     title="FireEye Dashboard",
     host="0.0.0.0",
     port=8090,
     favicon="🔥",
     show=False,
+    storage_secret=_storage_secret,
 )
